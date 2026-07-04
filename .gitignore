@@ -1,0 +1,16 @@
+# Build output
+.pio/
+*.bin
+*.o
+/tmp/
+
+# Local tooling / editor config (machine-specific)
+.claude/
+.vscode/
+
+# Python
+__pycache__/
+*.pyc
+
+# Tool output
+geotagged.*

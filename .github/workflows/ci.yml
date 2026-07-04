@@ -1,0 +1,40 @@
+name: ci
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Python tests
+        run: python3 -m unittest discover -v
+
+      - name: Native date-math test
+        run: c++ -std=c++17 -O2 tests/date_math_test.cpp -o /tmp/dt && /tmp/dt
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.platformio
+            ~/.cache/pip
+          key: pio-${{ hashFiles('platformio.ini') }}
+
+      - name: Firmware build
+        run: |
+          pip install "platformio~=6.1"
+          pio run
+          sha256sum .pio/build/esp32dev/firmware.bin > firmware.bin.sha256
+          cat firmware.bin.sha256
+
+      - name: Publish firmware + checksum
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            .pio/build/esp32dev/firmware.bin
+            firmware.bin.sha256
