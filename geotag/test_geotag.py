@@ -1,5 +1,6 @@
 """Unit tests for geotag.core."""
 import calendar
+import csv
 import json
 import os
 import stat
@@ -74,6 +75,8 @@ class TestCsvSafe(unittest.TestCase):
     def test_escapes_formula(self):
         self.assertEqual(gt.csvsafe("=cmd()"), "'=cmd()")
         self.assertEqual(gt.csvsafe("home.sub"), "home.sub")
+        self.assertEqual(gt.csvsafe(" =cmd()"), "' =cmd()")     # formula after leading space
+        self.assertEqual(gt.csvsafe("\t=x"), "'\t=x")           # leading tab
 
 
 class TestCollect(unittest.TestCase):
@@ -102,6 +105,31 @@ class TestOutputs(unittest.TestCase):
             if os.name == "posix":
                 self.assertEqual(stat.S_IMODE(os.stat(out + ".csv").st_mode), 0o600)
                 self.assertEqual(stat.S_IMODE(os.stat(out + ".geojson").st_mode), 0o600)
+
+
+class TestMainEndToEnd(unittest.TestCase):
+    def test_csv_content(self):
+        with tempfile.TemporaryDirectory() as d:
+            gpx = os.path.join(d, "t.gpx")
+            with open(gpx, "w") as fh:
+                fh.write('<gpx xmlns="http://www.topografix.com/GPX/1/1"><trk><trkseg>'
+                         '<trkpt lat="59.0" lon="10.0"><time>2026-07-01T12:00:00Z</time></trkpt>'
+                         '<trkpt lat="59.5" lon="10.5"><time>2026-07-01T12:01:00Z</time></trkpt>'
+                         "</trkseg></trk></gpx>")
+            caps = os.path.join(d, "caps")
+            os.makedirs(caps)
+            sub = os.path.join(caps, "door.sub")
+            with open(sub, "w") as fh:
+                fh.write("x")
+            t = calendar.timegm((2026, 7, 1, 12, 0, 5, 0, 0, 0))   # 5 s after the first trkpt
+            os.utime(sub, (t, t))
+            out = os.path.join(d, "res")
+            gt.main([gpx, caps, "--tol", "30", "--out", out])
+            with open(out + ".csv", newline="") as fh:
+                rows = list(csv.reader(fh))
+        self.assertEqual(rows[0], ["file", "type", "capture_utc", "lat", "lng", "matched"])
+        self.assertEqual(rows[1], ["door.sub", "sub", "2026-07-01T12:00:05Z", "59.0", "10.0", "True"])
+        self.assertEqual(len(rows), 2)                          # header + the one capture
 
 
 if __name__ == "__main__":

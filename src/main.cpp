@@ -49,10 +49,12 @@ uint32_t trackInterval = TRACK_EVERY_MS;   // grows when the track buffer fills
 uint32_t lastScan = 0, lastTrack = 0, scanStart = 0;
 bool scanning = false;
 
+static void haltError(const char* msg);   // defined below; blinks the LED and halts
+
 static const char* loadOrMakePass() {
 #ifdef FEBERIS_AP_PASS
   if (strlen(FEBERIS_AP_PASS) < 8 || strlen(FEBERIS_AP_PASS) > 63)
-    Serial.println("WARNING: FEBERIS_AP_PASS must be 8..63 chars");
+    haltError("FEBERIS_AP_PASS must be 8..63 chars");    // empty would open the AP; refuse to boot
   snprintf(apPass, sizeof apPass, "%s", FEBERIS_AP_PASS);
 #else
   Preferences p;
@@ -111,7 +113,8 @@ static void jsonEscape(String& j, const char* s) {
 }
 static String csvField(const char* s) {
   String v(s);
-  if (v.length() && strchr("=+-@\t\r", v[0])) v = String("'") + v;   // neutralize spreadsheet formulas
+  size_t lead = 0; while (lead < v.length() && v[lead] == ' ') lead++;    // first non-space char
+  if (lead < v.length() && strchr("=+-@\t\r", v[lead])) v = String("'") + v;  // neutralize spreadsheet formulas
   if (v.indexOf(',') < 0 && v.indexOf('"') < 0 && v.indexOf('\n') < 0 && v.indexOf('\r') < 0) return v;
   String o = "\""; for (char c : v) { if (c == '"') o += '"'; o += c; } o += '"'; return o;  // RFC4180
 }
@@ -149,7 +152,7 @@ static void handleData() {
   std::sort(top.begin(), top.end(), [](const Ap* x, const Ap* y) { return x->rssi > y->rssi; });
   if (top.size() > JSON_APS) top.resize(JSON_APS);
 
-  String j = "{\"gps\":{\"fix\":"; j += haveFix ? "true" : "false";
+  String j = "{\"gps\":{\"fix\":"; j.reserve(4096); j += haveFix ? "true" : "false";  // one alloc, less heap churn
   j += ",\"time\":"; j += haveTime ? "true" : "false";
   j += ",\"lat\":" + String(curLat, 6) + ",\"lng\":" + String(curLng, 6) + ",\"sats\":" + String(sats) + "}";
   j += ",\"count\":" + String((int)aps.size());

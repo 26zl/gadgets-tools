@@ -36,11 +36,7 @@ def parse_time(s):
 
 
 def parse_gpx(path):
-    """Return [(epoch, lat, lng), ...] sorted by time; skip points with bad time or coordinates.
-
-    GPX has no DTD, so any DTD/entity declaration is rejected outright. That closes XXE and
-    entity-expansion ("billion laughs") DoS on untrusted files, without a third-party parser.
-    """
+    """Return [(epoch, lat, lng), ...] sorted by time; skip bad points, reject DTD/entity decls (XXE guard)."""
     try:
         with open(path, "rb") as fh:
             data = fh.read()
@@ -117,7 +113,7 @@ def collect_captures(root, offset):
 def csvsafe(v):
     """Neutralize CSV/formula injection: prefix a leading =, +, -, @ etc. with an apostrophe."""
     s = str(v)
-    return "'" + s if s[:1] in ("=", "+", "-", "@", "\t", "\r") else s
+    return "'" + s if s.lstrip(" ")[:1] in ("=", "+", "-", "@", "\t", "\r") else s
 
 
 def _iso(t):
@@ -126,7 +122,7 @@ def _iso(t):
 
 def _write_temp(path, text):
     """Write owner-only text to a synced temporary file."""
-    tmp = path + ".tmp"
+    tmp = f"{path}.{os.getpid()}.tmp"                     # pid keeps concurrent runs from colliding
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "w", newline="") as fh:
         fh.write(text)
@@ -158,7 +154,11 @@ def write_outputs(rows, out):
         os.unlink(csv_tmp)
         raise
     os.replace(csv_tmp, csv_path)
-    os.replace(gj_tmp, gj_path)
+    try:
+        os.replace(gj_tmp, gj_path)
+    except BaseException:
+        os.unlink(gj_tmp)                                 # csv already committed; don't leak the temp
+        raise
 
 
 def main(argv=None):
