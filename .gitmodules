@@ -1,0 +1,9 @@
+[submodule "t-dongle-s3/payloads"]
+	path = t-dongle-s3/payloads
+	url = https://github.com/hak5/usbrubberducky-payloads.git
+[submodule "m5stickc-plus2/ir"]
+	path = m5stickc-plus2/ir
+	url = https://github.com/Lucaslhm/Flipper-IRDB.git
+[submodule "m5stickc-plus2/evil-portal"]
+	path = m5stickc-plus2/evil-portal
+	url = https://github.com/Batcherss/evil-portal-html.git

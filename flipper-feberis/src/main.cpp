@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cstring>
 #include "datetime.h"
+#include "track.h"
 #include "web_ui.h"
 
 static const char* AP_SSID = "FeberisRecon";
@@ -32,7 +33,6 @@ HardwareSerial GPSserial(1);
 // Fixed-size access-point record.
 struct Ap { uint8_t bssid[6]; char ssid[33]; int16_t rssi; uint8_t channel, enc;
             double lat, lng; uint32_t firstSeen; bool hasPos; };
-struct Trk { double lat, lng; uint32_t t; };
 std::vector<Ap> aps;
 std::vector<Trk> track;
 
@@ -252,10 +252,8 @@ void loop() {
 
   if (haveFix && millis() - lastTrack > trackInterval) {
     lastTrack = millis();
-    if (track.size() >= MAX_TRACK) {          // Downsample while preserving session coverage.
-      size_t w = 0;
-      for (size_t r = 0; r < track.size(); r += 2) track[w++] = track[r];
-      track.resize(w);
+    if (track.size() >= MAX_TRACK) {
+      decimateTrack(track);
       trackInterval *= 2;
     }
     track.push_back({ curLat, curLng, curEpoch });

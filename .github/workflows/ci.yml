@@ -4,6 +4,9 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: flipper-feberis
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -16,13 +19,16 @@ jobs:
       - name: Native date-math test
         run: c++ -std=c++17 -O2 tests/date_math_test.cpp -o /tmp/dt && /tmp/dt
 
+      - name: Native track test
+        run: c++ -std=c++17 -O2 tests/track_test.cpp -o /tmp/tk && /tmp/tk
+
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:
           path: |
             ~/.platformio
             ~/.cache/pip
-          key: pio-${{ hashFiles('platformio.ini') }}
+          key: pio-${{ hashFiles('flipper-feberis/platformio.ini') }}
 
       - name: Firmware build
         run: |
@@ -36,5 +42,5 @@ jobs:
         with:
           name: firmware
           path: |
-            .pio/build/esp32dev/firmware.bin
-            firmware.bin.sha256
+            flipper-feberis/.pio/build/esp32dev/firmware.bin
+            flipper-feberis/firmware.bin.sha256
