@@ -14,7 +14,7 @@
 
 static const char* AP_SSID = "FeberisRecon";
 
-static const int GPS_RX = 4;      // GPS TX  -> ESP32 GPIO4  (we read here)
+static const int GPS_RX = 4;      // GPS TX  -> ESP32 GPIO4  (RX)
 static const int GPS_TX = 13;     // ESP32 GPIO13 -> GPS RX
 static const int LED_PIN = 25;
 
@@ -152,7 +152,7 @@ static void handleData() {
   std::sort(top.begin(), top.end(), [](const Ap* x, const Ap* y) { return x->rssi > y->rssi; });
   if (top.size() > JSON_APS) top.resize(JSON_APS);
 
-  String j = "{\"gps\":{\"fix\":"; j.reserve(4096); j += haveFix ? "true" : "false";  // one alloc, less heap churn
+  String j = "{\"gps\":{\"fix\":"; j.reserve(4096); j += haveFix ? "true" : "false";  // reserve up front to reduce heap churn
   j += ",\"time\":"; j += haveTime ? "true" : "false";
   j += ",\"lat\":" + String(curLat, 6) + ",\"lng\":" + String(curLng, 6) + ",\"sats\":" + String(sats) + "}";
   j += ",\"count\":" + String((int)aps.size());

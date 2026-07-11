@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Guided Kali NetHunter (re)install / LineageOS upgrade for Galaxy S10 (beyond1lte).
-# Run it YOURSELF (the vbmeta flash needs your own shell): ./upgrade.sh
-# Runs the computer-side commands, pauses for the on-phone taps. See README for the gotchas.
+# Run interactively (the vbmeta flash needs a local shell): ./upgrade.sh
+# Runs the computer-side commands, pauses for the on-phone taps. See README for details.
 # Needs: adb, heimdall (sudo port install Heimdall), gh, curl, python3.
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -61,4 +61,4 @@ wait_auth
 
 ok "Verifying"
 "$HERE/verify.sh"
-ok "Done. If anything bootloops: flash the clean boot.img back ($HD flash --BOOT boot.img) and check the README gotchas."
+ok "Done. If anything bootloops: flash the clean boot.img back ($HD flash --BOOT boot.img) and check the README notes."

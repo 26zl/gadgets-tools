@@ -37,11 +37,9 @@ Open [esp.huhn.me](https://esp.huhn.me/) in Chrome/Edge → Connect → add the 
 Format a microSD as a **single FAT32 partition** (≤32 GB works best) and insert it after flashing — payloads and captures live there.
 
 ## 5. First connect
-Unplug/replug. The dongle brings up its own WiFi AP:
-- **SSID:** `iPhone14`   **Password:** `password`
-- Web UI: **http://4.3.2.1:8080** — write and run DuckyScript payloads here.
+Unplug/replug. The dongle brings up its own WiFi AP — join it, then open the web UI at **http://4.3.2.1:8080** to write and run DuckyScript payloads.
 
-Change the SSID/password in the web-UI preferences.
+Set the AP SSID and password in the web-UI preferences.
 
 ## Payloads
 Community DuckyScript payloads live in [`payloads/`](payloads/) — a git submodule of the official [Hak5 library](https://github.com/hak5/usbrubberducky-payloads).

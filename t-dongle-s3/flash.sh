@@ -34,4 +34,4 @@ echo "==> flashing on $PORT (esp32s3)"
   0x10000 "$W/firmware.bin"
 
 echo "==> done! Unplug/replug the dongle."
-echo "    Join WiFi 'iPhone14' (password 'password') and open http://4.3.2.1:8080"
+echo "    Join the WiFi AP the dongle broadcasts, then open http://4.3.2.1:8080"

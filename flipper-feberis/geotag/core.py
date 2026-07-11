@@ -23,7 +23,7 @@ def _local(tag):
 
 def parse_time(s):
     """Parse a GPX <time> to int epoch seconds, or None. Tolerates Z, offsets, fractional secs."""
-    s = re.sub(r"\.\d+", "", s.strip())          # drop fractional seconds; we only need whole seconds
+    s = re.sub(r"\.\d+", "", s.strip())          # drop fractional seconds; whole seconds only
     if s.endswith("Z"):
         s = s[:-1] + "+00:00"
     try:

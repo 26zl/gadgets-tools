@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Download everything for a Kali NetHunter (re)install on beyond1lte / LineageOS 23.x (Android 16).
-# KEY: needs Magisk v30.7+ — the Kali guide's v28.1 bootloops on A16. Flash per README.
+# Requires Magisk v30.7+ (v28.1 bootloops on Android 16). Flash per README.
 # Needs: gh, curl, python3.
 set -euo pipefail
 DIR="${1:-$HOME/nethunter-s10}"; mkdir -p "$DIR"; cd "$DIR"
@@ -14,10 +14,10 @@ for f in latest['files']:
     if f['filename'].endswith('signed.zip') or f['filename'] in ('recovery.img','boot.img'): print(f['url'])
 " | while read -r u; do echo "   $(basename "$u")"; curl -fsSL -O "$u"; done
 
-echo "==> Magisk latest (need v30.7+ for A16 — NOT the guide's v28.1)"
+echo "==> Magisk latest (v30.7+ required for Android 16)"
 gh release download --repo topjohnwu/Magisk --dir . --skip-existing --pattern 'Magisk-v*.apk'
 
-echo "==> vbmeta (AVB-disabling) from V0lk3n"
+echo "==> vbmeta (AVB-disabling)"
 gh release download nethunter-23.0 --repo V0lk3n/nethunter_kernel_samsung_exynos9820 --dir . --skip-existing --pattern 'vbmeta.img'
 
 echo "==> Kali NetHunter kalifs_full installer (URL from get-kali)"

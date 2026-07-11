@@ -13,7 +13,7 @@ Kali NetHunter on a **Samsung Galaxy S10 — SM-G973F (`beyond1lte`, Exynos)**, 
 | Host link | wireless adb (Android 11+ Wireless Debugging) — frees USB-C for the hub |
 
 ## The one thing that matters
-The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-nethunter-on-the-samsung-galaxy-s10/) says Magisk **v28.1** — that is too old for Android 16 and **bootloops**. Use **Magisk v30.7+**. That was the whole battle.
+The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-nethunter-on-the-samsung-galaxy-s10/) says Magisk **v28.1** — that is too old for Android 16 and **bootloops**. Use **Magisk v30.7+**.
 
 ## Tools
 **Host (macOS):**
@@ -33,7 +33,7 @@ The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-net
 | `verify.sh` | adb health-check (device, kernel, Magisk, NetHunter apps) |
 
 ## Install / upgrade
-**Easiest:** `./upgrade.sh` — run it **yourself** (the `vbmeta` / `setenforce` steps need your own shell). Or manually:
+**Easiest:** `./upgrade.sh` — run it interactively (the `vbmeta` / `setenforce` steps need a local shell). Or manually:
 
 1. **Recovery + AVB off** (Download mode):
    ```
@@ -45,7 +45,7 @@ The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-net
 4. **NetHunter**: `adb push kali-nethunter-*-full.zip /sdcard/` → Magisk → Modules → Install from Storage → reboot
 5. `./verify.sh`
 
-## Peripherals — how we set them up
+## Peripherals — setup
 
 ### Cable-free adb (frees USB-C for the hub)
 Developer options → **Wireless debugging**, then on the host:
@@ -73,10 +73,10 @@ airodump-ng --gpsd -w wardrive wlan2
 ```
 Or NetHunter app → **Wardriving**.
 
-## Gotchas we hit
+## Gotchas
 - **Magisk v28.1 bootloops on A16** → v30.7+.
 - A Magisk-patched boot needs **AVB disabled** (`vbmeta`); the LineageOS Updater **re-enables** it.
-- `--VBMETA` flash and `setenforce 0` are blocked by the agent's auto-mode (they weaken security) — run them yourself.
+- `--VBMETA` flash and `setenforce 0` are blocked by the agent's auto-mode (they weaken security) — run them manually.
 - USB plugged in during a force-reboot → Samsung jumps to Download mode. Unplug USB to boot normally.
 - Recovery ADB has its **own** auth prompt — tap **Allow** (not No).
 - Internal **nexmon** (V0lk3n's 23.0 module) does **not** work on 23.2 (`__nex_driver_io: error`, firmware mismatch) — use the ALFA.
