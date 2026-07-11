@@ -1,5 +1,8 @@
 # gadgets-tools
 
+[![ci](https://github.com/26zl/gadgets-tools/actions/workflows/ci.yml/badge.svg)](https://github.com/26zl/gadgets-tools/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Tools and firmware for various Flipper Zero / ESP32 gadgets — one folder per device.
 
 | Folder | Device | What's here |
