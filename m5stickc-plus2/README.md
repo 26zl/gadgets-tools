@@ -25,14 +25,14 @@ Or the no-tools web flasher: [bruce.computer/flasher](https://bruce.computer/fla
 ## IR codes — [`ir/`](ir/)
 Universal remote database ([Lucaslhm/Flipper-IRDB](https://github.com/Lucaslhm/Flipper-IRDB), ~8900 `.ir` files) — Bruce reads Flipper `.ir` format directly.
 ```bash
-git submodule update --init --remote m5stickc-plus2/ir
+git submodule update --init m5stickc-plus2/ir   # pinned commit (add --remote to update)
 ```
 The StickC has no SD slot, so upload the `.ir` files you want via Bruce's **WebUI** (into LittleFS), then send from the IR menu.
 
 ## Evil Portal templates — [`evil-portal/`](evil-portal/)
 Captive-portal HTML for Bruce ([Batcherss/evil-portal-html](https://github.com/Batcherss/evil-portal-html)) — use the [`Bruce/`](evil-portal/Bruce/) folder.
 ```bash
-git submodule update --init --remote m5stickc-plus2/evil-portal
+git submodule update --init m5stickc-plus2/evil-portal   # pinned commit (add --remote to update)
 ```
 Load an HTML file into Bruce's **Evil Portal** feature. **Authorized security tests only.**
 

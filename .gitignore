@@ -2,6 +2,7 @@
 .pio/
 *.bin
 *.o
+compile_commands.json
 /tmp/
 
 # Local tooling / editor config (machine-specific)

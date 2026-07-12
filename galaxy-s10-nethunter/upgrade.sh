@@ -24,7 +24,7 @@ ok "Current state"
 
 step "Download latest files (LineageOS, Magisk v30.7+, vbmeta, Kali installer) to $DIR"
 "$HERE/prepare-upgrade.sh" "$DIR"
-cd "$DIR"
+cd "$DIR" || exit 1
 LIN=$(ls -t lineage-*-beyond1lte-signed.zip 2>/dev/null | head -1)
 MAG=$(ls -t Magisk-v*.apk 2>/dev/null | head -1)
 KAL=$(ls -t kali-nethunter-*full.zip 2>/dev/null | head -1)

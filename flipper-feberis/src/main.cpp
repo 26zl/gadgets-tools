@@ -10,6 +10,7 @@
 #include <cstring>
 #include "datetime.h"
 #include "track.h"
+#include "format.h"
 #include "web_ui.h"
 
 static const char* AP_SSID = "FeberisRecon";
@@ -32,7 +33,7 @@ HardwareSerial GPSserial(1);
 
 // Fixed-size access-point record.
 struct Ap { uint8_t bssid[6]; char ssid[33]; int16_t rssi; uint8_t channel, enc;
-            double lat, lng; uint32_t firstSeen; bool hasPos; };
+            double lat, lng; uint32_t seen; bool hasPos; };
 std::vector<Ap> aps;
 std::vector<Trk> track;
 
@@ -103,22 +104,6 @@ static const char* encStr(int m) {
 }
 static String authWigle(int m) { return m == WIFI_AUTH_OPEN ? "[ESS]" : String("[") + encStr(m) + "-PSK][ESS]"; }
 
-static void jsonEscape(String& j, const char* s) {
-  for (const unsigned char* p = (const unsigned char*)s; *p; ++p) {
-    unsigned char c = *p;
-    if (c == '"' || c == '\\') { j += '\\'; j += (char)c; }
-    else if (c < 0x20) { char b[7]; snprintf(b, sizeof b, "\\u%04x", c); j += b; }
-    else j += (char)c;                                   // bytes >=0x80 passed through (assumed UTF-8)
-  }
-}
-static String csvField(const char* s) {
-  String v(s);
-  size_t lead = 0; while (lead < v.length() && v[lead] == ' ') lead++;    // first non-space char
-  if (lead < v.length() && strchr("=+-@\t\r", v[lead])) v = String("'") + v;  // neutralize spreadsheet formulas
-  if (v.indexOf(',') < 0 && v.indexOf('"') < 0 && v.indexOf('\n') < 0 && v.indexOf('\r') < 0) return v;
-  String o = "\""; for (char c : v) { if (c == '"') o += '"'; o += c; } o += '"'; return o;  // RFC4180
-}
-
 static void feedGps() { while (GPSserial.available()) gps.encode(GPSserial.read()); }
 
 static void ingest(int n) {
@@ -129,9 +114,12 @@ static void ingest(int n) {
     Ap* found = nullptr;
     for (auto& a : aps) if (memcmp(a.bssid, b, 6) == 0) { found = &a; break; }
     if (found) {
-      if (rssi > found->rssi) found->rssi = rssi;
-      if (!found->hasPos && haveFix) {                    // Add coordinates after GPS lock.
-        found->lat = curLat; found->lng = curLng; found->firstSeen = curEpoch; found->hasPos = true;
+      // Record position at the strongest observation — a better single-point WiGLE fix than
+      // stamping it at the first GPS lock, which can be far from where the AP was strongest.
+      bool stronger = rssi > found->rssi;
+      if (stronger) found->rssi = rssi;
+      if (haveFix && (stronger || !found->hasPos)) {
+        found->lat = curLat; found->lng = curLng; found->seen = curEpoch; found->hasPos = true;
       }
       continue;
     }
@@ -141,7 +129,7 @@ static void ingest(int n) {
     snprintf(a.ssid, sizeof a.ssid, "%s", WiFi.SSID(i).c_str());
     a.rssi = rssi; a.channel = (uint8_t)WiFi.channel(i); a.enc = (uint8_t)WiFi.encryptionType(i);
     a.lat = haveFix ? curLat : 0; a.lng = haveFix ? curLng : 0;
-    a.firstSeen = haveFix ? curEpoch : 0; a.hasPos = haveFix;
+    a.seen = haveFix ? curEpoch : 0; a.hasPos = haveFix;
     aps.push_back(a);
   }
 }
@@ -169,27 +157,29 @@ static void handleData() {
   for (auto* a : top) {
     if (!first) j += ',';
     first = false;
-    j += "{\"ssid\":\""; jsonEscape(j, a->ssid);
+    j += "{\"ssid\":\""; j += jsonEscape(a->ssid).c_str();
     j += "\",\"rssi\":" + String(a->rssi) + ",\"ch\":" + String(a->channel) +
          ",\"enc\":\"" + encStr(a->enc) + "\"";
     if (a->hasPos) j += ",\"lat\":" + String(a->lat, 6) + ",\"lng\":" + String(a->lng, 6);
     j += "}";
   }
   j += "]}";
+  server.sendHeader("X-Content-Type-Options", "nosniff");
   server.send(200, "application/json", j);
 }
 
 static void handleCsv() {
   server.sendHeader("Content-Disposition", "attachment; filename=\"feberis-wigle.csv\"");
+  server.sendHeader("X-Content-Type-Options", "nosniff");
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
   server.send(200, "text/csv", "");
   server.sendContent("WigleWifi-1.4,appRelease=feberis,model=ESP32,release=1,device=FeberisPro,display=,board=esp32,brand=Feberis\r\n");
   server.sendContent("MAC,SSID,AuthMode,FirstSeen,Channel,RSSI,CurrentLatitude,CurrentLongitude,AltitudeMeters,AccuracyMeters,Type\r\n");
   for (auto& a : aps) {
     feedGps();                                            // keep draining the GPS UART during export
-    if (!a.hasPos || !a.firstSeen) continue;              // WiGLE needs a real position + time
-    server.sendContent(macStr(a.bssid) + "," + csvField(a.ssid) + "," + authWigle(a.enc) + "," +
-                       tsStr(a.firstSeen) + "," + String(a.channel) + "," + String(a.rssi) + "," +
+    if (!a.hasPos || !a.seen) continue;                   // WiGLE needs a real position + time
+    server.sendContent(macStr(a.bssid) + "," + csvField(a.ssid).c_str() + "," + authWigle(a.enc) + "," +
+                       tsStr(a.seen) + "," + String(a.channel) + "," + String(a.rssi) + "," +
                        String(a.lat, 6) + "," + String(a.lng, 6) + ",0,0,WIFI\r\n");
   }
   server.sendContent("");
@@ -197,6 +187,7 @@ static void handleCsv() {
 
 static void handleGpx() {
   server.sendHeader("Content-Disposition", "attachment; filename=\"feberis-track.gpx\"");
+  server.sendHeader("X-Content-Type-Options", "nosniff");
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
   server.send(200, "application/gpx+xml", "");
   server.sendContent("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
@@ -225,9 +216,9 @@ void setup() {
   GPSserial.begin(9600, SERIAL_8N1, GPS_RX, GPS_TX);
   WiFi.mode(WIFI_AP_STA);
   const char* pw = loadOrMakePass();
-  if (!WiFi.softAP(AP_SSID, pw)) haltError("WiFi.softAP() failed");
+  if (!WiFi.softAP(AP_SSID, pw, 1, 1)) haltError("WiFi.softAP() failed");   // channel 1, SSID hidden
   Serial.printf("\nAP \"%s\" up | pass: %s | http://192.168.4.1\n", AP_SSID, pw);
-  server.on("/", []() { server.send_P(200, "text/html", INDEX_HTML); });
+  server.on("/", []() { server.sendHeader("X-Content-Type-Options", "nosniff"); server.send_P(200, "text/html", INDEX_HTML); });
   server.on("/data.json", handleData);
   server.on("/wigle.csv", handleCsv);
   server.on("/track.gpx", handleGpx);

@@ -1,8 +1,8 @@
 # galaxy-s10-nethunter
 
-Kali NetHunter on a **Samsung Galaxy S10 — SM-G973F (`beyond1lte`, Exynos)**, running **LineageOS 23.2 / Android 16**. This is the full setup record + a repeatable upgrade playbook. Verified working 2026-07-07.
+Kali NetHunter on a **Samsung Galaxy S10 — SM-G973F (`beyond1lte`, Exynos)**, running **LineageOS 23.2 / Android 16**. A repeatable (re)install and upgrade playbook.
 
-## What's running (verified)
+## What's running
 | Layer | Detail |
 | --- | --- |
 | ROM | LineageOS 23.2 (`beyond1lte`, Android 16) |
@@ -12,7 +12,7 @@ Kali NetHunter on a **Samsung Galaxy S10 — SM-G973F (`beyond1lte`, Exynos)**, 
 | GPS | HiLetgo VK172 (u-blox 7) → `/dev/ttyACM0` — 3D fix |
 | Host link | wireless adb (Android 11+ Wireless Debugging) — frees USB-C for the hub |
 
-## The one thing that matters
+## Magisk version
 The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-nethunter-on-the-samsung-galaxy-s10/) says Magisk **v28.1** — that is too old for Android 16 and **bootloops**. Use **Magisk v30.7+**.
 
 ## Tools
@@ -76,12 +76,12 @@ Or NetHunter app → **Wardriving**.
 ## Gotchas
 - **Magisk v28.1 bootloops on A16** → v30.7+.
 - A Magisk-patched boot needs **AVB disabled** (`vbmeta`); the LineageOS Updater **re-enables** it.
-- `--VBMETA` flash and `setenforce 0` are blocked by the agent's auto-mode (they weaken security) — run them manually.
+- `--VBMETA` flash and `setenforce 0` weaken security — run them manually.
 - USB plugged in during a force-reboot → Samsung jumps to Download mode. Unplug USB to boot normally.
 - Recovery ADB has its **own** auth prompt — tap **Allow** (not No).
 - Internal **nexmon** (V0lk3n's 23.0 module) does **not** work on 23.2 (`__nex_driver_io: error`, firmware mismatch) — use the ALFA.
 
-## Optional extras (not installed)
+## Optional extras
 - **PlayIntegrityFix** — so Google Play / banking apps pass integrity checks (needs Zygisk).
 - **Magisk Overlayfs** — systemless writable `/system`; rarely needed.
 - **Splash screen** — removes the unlocked-bootloader boot warning (cosmetic).

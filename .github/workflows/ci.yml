@@ -22,6 +22,9 @@ jobs:
       - name: Native track test
         run: c++ -std=c++17 -O2 tests/track_test.cpp -o /tmp/tk && /tmp/tk
 
+      - name: Native format test
+        run: c++ -std=c++17 -O2 tests/format_test.cpp -o /tmp/fmt && /tmp/fmt
+
       - name: Cache PlatformIO
         uses: actions/cache@v4
         with:

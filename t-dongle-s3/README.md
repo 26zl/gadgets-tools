@@ -37,7 +37,7 @@ Open [esp.huhn.me](https://esp.huhn.me/) in Chrome/Edge → Connect → add the 
 Format a microSD as a **single FAT32 partition** (≤32 GB works best) and insert it after flashing — payloads and captures live there.
 
 ## 5. First connect
-Unplug/replug. The dongle brings up its own WiFi AP — join it, then open the web UI at **http://4.3.2.1:8080** to write and run DuckyScript payloads.
+Unplug/replug. The dongle brings up its own WiFi AP — join it, then open the web UI at **`http://4.3.2.1:8080`** to write and run DuckyScript payloads.
 
 Set the AP SSID and password in the web-UI preferences.
 
@@ -45,7 +45,7 @@ Set the AP SSID and password in the web-UI preferences.
 Community DuckyScript payloads live in [`payloads/`](payloads/) — a git submodule of the official [Hak5 library](https://github.com/hak5/usbrubberducky-payloads).
 
 ```bash
-git submodule update --init --remote t-dongle-s3/payloads   # fetch / pull latest
+git submodule update --init t-dongle-s3/payloads   # checkout the pinned commit (add --remote to update)
 ```
 A fresh `git clone` of this repo needs `--recursive`, or run the command above once.
 

@@ -1,6 +1,6 @@
 # Flipper Zero + Feberis Pro tools
 
-Two tools that make the Flipper Zero + Feberis Pro combo more useful in the field:
+Two tools for the Flipper Zero + Feberis Pro:
 
 | Component | What it does |
 | --- | --- |
@@ -58,7 +58,7 @@ above. Set the Feberis switch to **ESP32 + GPS** mode.
 
 1. Connect the ESP32 over USB and open the serial monitor at 115200. On boot it prints the AP
    password — note it once.
-2. On your phone, join WiFi **`FeberisRecon`** with that password.
+2. On your phone, join the hidden WiFi **`FeberisRecon`** (add it manually as a network) with that password.
 3. Open `http://192.168.4.1`. Walk/drive around; download the CSV/GPX when done.
 
 Change the SSID/pins at the top of `src/main.cpp`.
@@ -69,8 +69,10 @@ Change the SSID/pins at the top of `src/main.cpp`.
   derived from anything broadcast and not in this repo. It is reprinted to serial on every boot.
 - To set a **fixed** password instead, uncomment `build_flags` in `platformio.ini`
   (`-DFEBERIS_AP_PASS='"your-8-to-63-char-password"'`) and rebuild.
-- **Endpoints are not individually authenticated.** Anyone on the AP can download `/track.gpx` —
-  your movement history. Treat the password as a secret and don't run the AP when you don't need it.
+- **The AP is hidden and endpoints are not individually authenticated** — the WPA2 password *is*
+  the access control. Anyone with it (i.e. on the AP) can download `/track.gpx`, your movement
+  history; a per-endpoint token served over that same AP would add no real protection. Treat the
+  password as a secret and don't run the AP when you don't need it.
 
 ---
 
@@ -102,6 +104,7 @@ matters.
 python3 -m unittest discover                                                     # geotag logic
 c++ -std=c++17 -O2 tests/date_math_test.cpp -o /tmp/dt && /tmp/dt                 # firmware date math vs timegm
 c++ -std=c++17 -O2 tests/track_test.cpp -o /tmp/tk && /tmp/tk                     # firmware track decimation
+c++ -std=c++17 -O2 tests/format_test.cpp -o /tmp/fmt && /tmp/fmt                  # CSV/JSON escaping (injection + UTF-8)
 ```
 
 CI (`.github/workflows/ci.yml`) also runs a firmware build on every push.
