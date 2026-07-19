@@ -3,6 +3,7 @@
 Kali NetHunter on a **Samsung Galaxy S10 — SM-G973F (`beyond1lte`, Exynos)**, running **LineageOS 23.2 / Android 16**. A repeatable (re)install and upgrade playbook.
 
 ## What's running
+
 | Layer | Detail |
 | --- | --- |
 | ROM | LineageOS 23.2 (`beyond1lte`, Android 16) |
@@ -13,67 +14,175 @@ Kali NetHunter on a **Samsung Galaxy S10 — SM-G973F (`beyond1lte`, Exynos)**, 
 | Host link | wireless adb (Android 11+ Wireless Debugging) — frees USB-C for the hub |
 
 ## Magisk version
+
 The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-nethunter-on-the-samsung-galaxy-s10/) says Magisk **v28.1** — that is too old for Android 16 and **bootloops**. Use **Magisk v30.7+**.
 
 ## Tools
+
 **Host (macOS):**
+
 - **Heimdall** via **MacPorts** (Homebrew's formula + cask are both dead): `sudo port install Heimdall`
 - `adb` (Android platform-tools) · `gh` (GitHub CLI) · `curl` · `python3`
 
 **Hardware:**
+
 - ALFA Network **AWUS036ACS** (RTL8811AU) — external dual-band WiFi, monitor/injection
 - HiLetgo **VK172** (u-blox 7) — USB GPS/GNSS receiver
-- **Belkin USB-C hub** — runs the ALFA + GPS together off the phone's single USB-C port (use a PD/charge port to power the phone during long sessions — the ALFA is power-hungry)
+- **Belkin USB-C hub — must be powered** (PD input / powerbank). It runs the ALFA + GPS together off the phone's single USB-C port, but the ALFA is power-hungry on TX: on bus power alone, **injection browns out the whole hub** (ALFA + GPS drop out, then a ~7 s USB reconnect loop). Monitor/RX works unpowered; **injection needs the hub powered** — with a powerbank it hits ~96% ACK.
 
-## Scripts here
+## Scripts (in [`scripts/`](scripts/))
+
 | Script | Does |
 | --- | --- |
 | `upgrade.sh` | Guided (re)install — downloads + walks you through every step, then verifies |
 | `prepare-upgrade.sh` | Just download the latest files → `~/nethunter-s10` |
-| `verify.sh` | adb health-check (device, kernel, Magisk, NetHunter apps) |
+| `setup.sh` | **Post-install provisioning** — installs the chroot tools/deps not in the base image (nmap, gpsd, aircrack/wifite, pipx …), ships the bundled tools + `phone-doctor.sh`, then verifies |
+| `verify.sh` | adb health-check from the **Mac** (device, kernel, Magisk, NetHunter apps) |
+| `phone-doctor.sh` | health check run **on the phone** as root (AndroidSu / Termux): chroot, ALFA, GPS, netsec-auditor |
+| `apps.sh` | install the full Android app set via adb (stores, terminal, firewall/DNS, browser, tools) |
+| `magisk-modules.sh` | stage the Magisk module zips (LSPosed/Vector, Shamiko, PIF, ReZygisk) → `/sdcard/Download` |
+| `sdcard.sh` | shuttle files to the microSD to save internal storage — `info` / `push` / `move` |
+| `extras.sh` | install non-cybersec apps — media/torrent, dev/sysadmin, daily (FOSS-first) |
+
+## Bundled tools (submodules)
+
+My own tools that run on the phone, pulled in as submodules (`git submodule update --init --recursive`):
+
+| Submodule | What |
+| --- | --- |
+| [`netsec-auditor/`](netsec-auditor/) | Scope-gated network / OT-ICS / IoT / Wi-Fi auditor (Python CLI, JSON/HTML/PDF reports) |
+| [`cybersec-toolkit/`](cybersec-toolkit/) | Modular installer for 580+ security tools (Linux + Termux) + an MCP server |
+
+**Running `netsec-auditor` in the chroot.** Once the repo is public, install it straight in the Kali terminal (see netsec-auditor's own README for the full guide):
+
+```bash
+apt install -y nmap pipx bluez
+git clone https://github.com/26zl/netsec-auditor.git && cd netsec-auditor
+pipx install ".[wireless]"        # ".[all]" adds BLE + PDF
+netsec-auditor doctor
+```
+
+While it's still **private** the phone has no git creds, so ship the source over adb instead:
+
+```bash
+git -C netsec-auditor archive HEAD -o /tmp/na.tar
+adb push /tmp/na.tar /data/local/tmp/
+adb shell su -c 'K=/data/local/nhsystem/kali-arm64; mkdir -p $K/root/na; tar xf /data/local/tmp/na.tar -C $K/root/na; \
+  chroot $K /bin/bash -lc "cd /root/na && pip install --break-system-packages . && netsec-auditor doctor"'
+```
+
+Verified on the S10: `doctor` green (root/privileged, nmap, scapy, cryptography), a LAN `discover` found live hosts. Optional extras (`bleak`/BLE, `weasyprint`/PDF, `masscan`) aren't installed by default.
+
+## What's on the phone
+
+### Android apps (`./scripts/apps.sh`)
+
+Installed via adb from official sources (GitHub / GitLab / F-Droid).
+
+| Category | Apps |
+| --- | --- |
+| App stores | [F-Droid](https://f-droid.org) · [Droid-ify](https://github.com/Droid-ify/client) · [Aurora Store](https://gitlab.com/AuroraOSS/AuroraStore) (anon Play) · [Obtainium](https://github.com/ImranR98/Obtainium) (GitHub-release installer) |
+| Terminal | [Termux](https://github.com/termux/termux-app) + [Termux:API](https://github.com/termux/termux-api) + [Termux:Boot](https://github.com/termux/termux-boot) |
+| Network / privacy | [RethinkDNS](https://github.com/celzero/rethink-app) (firewall + DNS block + WireGuard) · [AFWall+](https://github.com/ukanth/afwall) (iptables firewall) · [AdAway](https://github.com/AdAway/AdAway) (systemless hosts) · [Mullvad VPN](https://github.com/mullvad/mullvadvpn-app) · [PCAPdroid](https://github.com/emanuelef/PCAPdroid) (packet capture) · [WiGLE WiFi](https://github.com/wiglenet/wigle-wifi-wardriving) (wardriving / GPS logging) |
+| Browser | [Cromite](https://github.com/uazo/cromite) (hardened Chromium; [IronFox](https://gitlab.com/ironfox-oss/IronFox) = hardened Firefox alt) |
+| Files / apps / cleanup | [Material Files](https://github.com/zhanghai/MaterialFiles) (root file mgr) · [App Manager](https://github.com/MuntashirAkon/AppManager) · [SD Maid SE](https://github.com/d4rken-org/sdmaid-se) |
+| Root helpers | [Shizuku](https://github.com/RikkaApps/Shizuku) (elevated APIs w/o full root) · [AccA](https://github.com/MatteCarra/AccA) (charging control) |
+| Root manager | [Magisk](https://github.com/topjohnwu/Magisk) (from the base install) |
+
+### Magisk modules (`./scripts/magisk-modules.sh` → staged to `/sdcard/Download`)
+
+Can't be adb-installed — install in **Magisk → Modules → Install from storage → reboot**. Enable **Zygisk** first; add banking/sensitive apps to the **DenyList** (Shamiko enforces the hiding).
+
+| Module | Purpose |
+| --- | --- |
+| [LSPosed (Vector)](https://github.com/JingMatrix/LSPosed) | Xposed framework, Android 16 fork |
+| [Shamiko](https://github.com/LSPosed/LSPosed.github.io/releases) | hide root from detection |
+| [PlayIntegrityFork (PIF)](https://github.com/osm0sis/PlayIntegrityFork) | pass Play Integrity for banking / Play apps |
+| [ReZygisk](https://github.com/PerformanC/ReZygisk) | stronger Zygisk implementation — if used, **disable Magisk's built-in Zygisk** |
+
+> Basic/Device integrity works for most apps; **Strong** (hardware-backed) integrity needs TrickyStore + a keybox — advanced and a moving target.
+
+### Kali chroot (`./scripts/setup.sh` + `kalifs_full`)
+
+Base image ships `nmap` · aircrack-ng suite · `wifite` · `reaver` · `kismet` · `bettercap` · `gpsd`. `setup.sh` adds `masscan` · `pipx` · `gpsd-clients` and installs **netsec-auditor**. Health-check the whole rig with `scripts/phone-doctor.sh`.
+
+### Hardening applied
+
+- **Private DNS** → `base.dns.mullvad.net` ([Mullvad DoT](https://mullvad.net/en/help/dns-over-https-and-dns-over-tls) — blocks ads/trackers/malware), set via `settings put global private_dns_mode hostname` + `private_dns_specifier`.
+- Firewall (RethinkDNS / AFWall+), root-hiding modules, and app-permission review are **installed, but you configure** them to taste.
+
+### Daily / non-cybersec apps (`./scripts/extras.sh`)
+
+| Category | Apps |
+| --- | --- |
+| Media / torrent | [LibreTorrent](https://github.com/proninyaroslav/libretorrent) · [LibreTube](https://github.com/libre-tube/LibreTube) · [AntennaPod](https://github.com/AntennaPod/AntennaPod) · [VLC](https://www.videolan.org/vlc/)\* · [Stremio](https://www.stremio.com)\* |
+| Dev / sysadmin | [Acode](https://github.com/deadlyjack/Acode) (editor) · [ConnectBot](https://github.com/connectbot/connectbot) (SSH) · [RustDesk](https://github.com/rustdesk/rustdesk) (remote desktop) · [WireGuard](https://www.wireguard.com)\* · [Termux](https://github.com/termux/termux-app) |
+| Daily / general | [Aegis](https://github.com/beemdevelopment/Aegis) (2FA) · [KeePassDX](https://github.com/Kunzisoft/KeePassDX) (passwords) · [Organic Maps](https://github.com/organicmaps/organicmaps) · [Joplin](https://joplinapp.org) (notes) · [Breezy Weather](https://github.com/breezy-weather/breezy-weather) · [KOReader](https://github.com/koreader/koreader) (ebooks) |
+
+*\* VLC / WireGuard = one tap in F-Droid (multi-abi builds); Stremio from [stremio.com](https://www.stremio.com) (torrent streaming via the Torrentio addon). Dev shell = Termux: `pkg install nodejs python go rust git neovim tmux openssh`.*
 
 ## Install / upgrade
-**Easiest:** `./upgrade.sh` — run it interactively (the `vbmeta` / `setenforce` steps need a local shell). Or manually:
+
+**Easiest:** `./scripts/upgrade.sh` — run it interactively (the `vbmeta` / `setenforce` steps need a local shell). Or manually:
 
 1. **Recovery + AVB off** (Download mode):
-   ```
+
+   ```bash
    heimdall flash --RECOVERY recovery.img --VBMETA vbmeta.img --no-reboot
    ```
+
 2. **ROM**: boot recovery → Format everything → `adb -d sideload lineage-23.2-*.zip`
    *(or LineageOS Updater in-place — but it re-enables AVB, so re-flash the disabling `vbmeta` before rooting)*
 3. **Root**: install **Magisk v30.7** → *Install → Select and Patch a File → `boot.img`* → `heimdall flash --BOOT magisk_patched.img`
 4. **NetHunter**: `adb push kali-nethunter-*-full.zip /sdcard/` → Magisk → Modules → Install from Storage → reboot
-5. `./verify.sh`
+5. `./scripts/verify.sh`
+6. `./scripts/setup.sh` — provision the userspace tools + bundled tools + on-device `phone-doctor.sh`
 
 ## Peripherals — setup
 
 ### Cable-free adb (frees USB-C for the hub)
+
 Developer options → **Wireless debugging**, then on the host:
-```
+
+```bash
 adb pair <ip>:<pairPort> <code>      # from "Pair device with pairing code"
 adb connect <ip>:<connectPort>       # main screen — a DIFFERENT port, changes on every WiFi reconnect
 ```
 
 ### External WiFi — ALFA → `wlan2`
-Driver is built into the NetHunter kernel; the ALFA just shows up as `wlan2` over the hub. In the **Kali terminal** (raw `iw`/`ip` from adb fails — SELinux/netd):
-```
+
+Driver is built into the NetHunter kernel; the ALFA shows up as `wlan2` over the hub. **Power the hub first** — injection browns out an unpowered one (see Hardware). In the **Kali terminal**:
+
+```bash
 airmon-ng check kill
 airmon-ng start wlan2          # stays wlan2 (not wlan2mon)
 aireplay-ng --test wlan2       # -> "Injection is working!"
 wifite -i wlan2
 ```
+
 > `airmon-ng check kill` kills the phone's WiFi → **wireless adb drops**. Do host/adb work first.
 
-### GPS — VK172 → `gpsd`
-Appears as `/dev/ttyACM0` (cdc_acm, built-in) and streams NMEA. In the **Kali terminal**:
+With SELinux **permissive** (`setenforce 0`), `iw`/`ip`/`aireplay-ng` are native (`/system/bin`) and run straight from `adb shell su` — no chroot. Touch only `wlan2` (skip `check kill`) and wireless adb stays up:
+
+```bash
+adb shell su -c 'ip link set wlan2 down; iw dev wlan2 set type monitor; ip link set wlan2 up'
+adb shell su -c 'aireplay-ng --test wlan2'    # -> "Injection is working!"
 ```
+
+### GPS — VK172 → `gpsd`
+
+Appears as `/dev/ttyACM0` (cdc_acm, built-in) and streams NMEA. In the **Kali terminal**:
+
+```bash
 gpsd -n /dev/ttyACM0
 cgps                           # wait for 3D fix (needs sky view; cold start ~1 min)
 airodump-ng --gpsd -w wardrive wlan2
 ```
-Or NetHunter app → **Wardriving**.
+
+Or NetHunter app → **Wardriving** (or the [WiGLE](https://github.com/wiglenet/wigle-wifi-wardriving) app).
 
 ## Gotchas
+
 - **Magisk v28.1 bootloops on A16** → v30.7+.
 - A Magisk-patched boot needs **AVB disabled** (`vbmeta`); the LineageOS Updater **re-enables** it.
 - `--VBMETA` flash and `setenforce 0` weaken security — run them manually.
@@ -82,7 +191,7 @@ Or NetHunter app → **Wardriving**.
 - Internal **nexmon** (V0lk3n's 23.0 module) does **not** work on 23.2 (`__nex_driver_io: error`, firmware mismatch) — use the ALFA.
 
 ## Optional extras
-- **PlayIntegrityFix** — so Google Play / banking apps pass integrity checks (needs Zygisk).
+
 - **Magisk Overlayfs** — systemless writable `/system`; rarely needed.
 - **Splash screen** — removes the unlocked-bootloader boot warning (cosmetic).
 

@@ -7,3 +7,9 @@
 [submodule "m5stickc-plus2/evil-portal"]
 	path = m5stickc-plus2/evil-portal
 	url = https://github.com/Batcherss/evil-portal-html.git
+[submodule "galaxy-s10-nethunter/netsec-auditor"]
+	path = galaxy-s10-nethunter/netsec-auditor
+	url = https://github.com/26zl/netsec-auditor.git
+[submodule "galaxy-s10-nethunter/cybersec-toolkit"]
+	path = galaxy-s10-nethunter/cybersec-toolkit
+	url = https://github.com/26zl/cybersec-toolkit.git

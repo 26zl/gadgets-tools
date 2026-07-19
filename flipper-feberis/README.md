@@ -113,14 +113,23 @@ CI (`.github/workflows/ci.yml`) also runs a firmware build on every push.
 
 ## Hardware acceptance test (before field use)
 
-Firmware behaviour that can only be confirmed on a real Feberis Pro — run through this once:
+Some behaviour can only be verified on a real Feberis Pro. Run this checklist once after flashing,
+before you rely on it in the field — each item is **do this → expect this**:
 
-- [ ] Flashes and boots; serial prints the AP; password is stable across reboots.
-- [ ] GPS locks (UART on GPIO4/13, 9600 baud); `fix`/`sats` update; losing signal flips to "no fix".
-- [ ] AP stays reachable during WiFi scans; dashboard keeps updating.
-- [ ] Multi-hour run: free heap stabilizes, no reset; note dropped-AP count in a dense area.
-- [ ] Download CSV + GPX while scanning; GPS keeps updating during the download.
-- [ ] WiGLE CSV imports on wigle.net; GPX opens in a mapping tool.
+- [ ] **Boot & AP** — Flash it, open the serial monitor at 115200, and confirm it prints the AP
+  password. Reboot a few times: the password should stay the same (it's saved in NVS, not
+  regenerated each boot).
+- [ ] **GPS lock** — Outdoors, with the GPS wired to GPIO4/13 (9600 baud), the dashboard's `fix`
+  and `sats` fields should climb and show a position within a minute or two. Block the antenna and
+  it should flip back to "no fix".
+- [ ] **Stays responsive while scanning** — During WiFi scans the AP stays reachable and the
+  dashboard keeps refreshing (no dropouts).
+- [ ] **Stability** — Leave it running for several hours: free heap levels off (no slow leak) and
+  it never resets. In a busy area, note the dropped-AP count.
+- [ ] **Downloads mid-scan** — Download the WiGLE CSV and the GPX while a scan is running; GPS keeps
+  updating throughout the download.
+- [ ] **Exports are valid** — The CSV imports cleanly on wigle.net, and the GPX opens in a mapping
+  tool (e.g. gpx.studio).
 
 ---
 

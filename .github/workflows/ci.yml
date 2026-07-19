@@ -47,3 +47,15 @@ jobs:
           path: |
             flipper-feberis/.pio/build/esp32dev/firmware.bin
             flipper-feberis/firmware.bin.sha256
+
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: markdownlint (project READMEs)
+        run: >
+          npx --yes markdownlint-cli2
+          README.md flipper-feberis/README.md flipper-wifi-devboard/README.md
+          galaxy-s10-nethunter/README.md m5stickc-plus2/README.md t-dongle-s3/README.md
+      - name: shellcheck (project scripts)
+        run: shellcheck -S warning galaxy-s10-nethunter/scripts/*.sh m5stickc-plus2/flash.sh t-dongle-s3/flash.sh
