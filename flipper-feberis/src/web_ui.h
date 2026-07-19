@@ -16,7 +16,7 @@ canvas{background:#000;border:1px solid #333;border-radius:8px;width:100%;height
 <div class="card">APs seen: <b id="cnt">0</b></div></div>
 <p><small id="stat"></small></p>
 <p><a class="btn" href="/wigle.csv">Download WiGLE CSV</a><a class="btn" href="/track.gpx">Download GPX</a></p>
-<canvas id="map" width="320" height="180"></canvas>
+<canvas id="map" width="320" height="180" role="img" aria-label="AP scatter map"></canvas>
 <table><thead><tr><th>SSID</th><th>RSSI</th><th>Ch</th><th>Enc</th></tr></thead><tbody id="tb"></tbody></table>
 <script>
 const $=id=>document.getElementById(id);

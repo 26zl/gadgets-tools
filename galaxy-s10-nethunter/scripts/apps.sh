@@ -4,9 +4,9 @@
 # Magisk modules (LSPosed, PlayIntegrityFix, Shamiko) are NOT here — install via the Magisk app.
 # Usage: ./apps.sh
 set -uo pipefail
-ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb; do
+ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb /usr/local/bin/adb /usr/lib/android-sdk/platform-tools/adb "$HOME/Android/Sdk/platform-tools/adb"; do
   command -v "$c" >/dev/null 2>&1 && { ADB="$c"; break; }; [ -x "$c" ] && { ADB="$c"; break; }; done
-[ -n "$ADB" ] || { echo "adb not found (brew install android-platform-tools)"; exit 1; }
+[ -n "$ADB" ] || { echo "adb not found (brew install android-platform-tools; Linux/WSL: sudo apt install adb)"; exit 1; }
 [ "$("$ADB" get-state 2>/dev/null)" = device ] || { echo "No device — connect adb and approve."; exit 1; }
 command -v gh >/dev/null || { echo "gh (GitHub CLI) required"; exit 1; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
@@ -38,24 +38,35 @@ if has com.aurora.store; then echo "  Aurora Store: already installed"; else
   install_apk "Aurora Store" "$TMP/aurora.apk"
 fi
 
+# Termux family — GitHub ONLY, no F-Droid fallback. All three share sharedUserId com.termux and must
+# carry the SAME signature; mixing GitHub (shared test key) with F-Droid (F-Droid key) fails with
+# INSTALL_FAILED_SHARED_USER_INCOMPATIBLE. Update Termux only from official termux/* releases.
+for e in "com.termux|Termux|termux/termux-app|*universal*.apk" \
+         "com.termux.api|Termux:API|termux/termux-api|*.apk" \
+         "com.termux.boot|Termux:Boot|termux/termux-boot|*.apk"; do
+  IFS='|' read -r pkg label repo pat <<< "$e"
+  if has "$pkg"; then echo "  $label: already installed"; continue; fi
+  rm -f "$TMP"/*.apk
+  gh release download --repo "$repo" --pattern "$pat" --dir "$TMP" --clobber 2>/dev/null \
+    || gh release download --repo "$repo" --pattern '*.apk' --dir "$TMP" --clobber 2>/dev/null
+  apk="$(pick_best)"
+  if [ -n "$apk" ] && "$ADB" install -r "$apk" >/dev/null 2>&1; then echo "  $label: installed (GitHub)"
+  else echo "  $label: FAILED — install from GitHub only (never mix sources; shared com.termux signature)"; fi
+done
+
 # GitHub apps:  pkgid | label | owner/repo | preferred-glob
 GH_APPS=(
   "dev.imranr.obtainium|Obtainium|ImranR98/Obtainium|*arm64-v8a-release.apk"
-  "com.termux|Termux|termux/termux-app|*universal*.apk"
   "org.adaway|AdAway|AdAway/AdAway|*.apk"
   "com.celzero.bravedns|RethinkDNS|celzero/rethink-app|*website*.apk"
-  "com.termux.api|Termux:API|termux/termux-api|*.apk"
-  "com.termux.boot|Termux:Boot|termux/termux-boot|*.apk"
   "eu.darken.sdmse|SD Maid SE|d4rken-org/sdmaid-se|*foss-release.apk"
   "moe.shizuku.privileged.api|Shizuku|RikkaApps/Shizuku|shizuku-*.apk"
   "io.github.muntashirakon.AppManager|App Manager|MuntashirAkon/AppManager|AppManager_v*.apk"
   "net.mullvad.mullvadvpn|Mullvad VPN|mullvad/mullvadvpn-app|MullvadVPN-*.apk"
   "org.cromite.cromite|Cromite|uazo/cromite|arm64_ChromePublic.apk"
-  "mattecarra.accapp|AccA|MatteCarra/AccA|*.apk"
   "me.zhanghai.android.files|Material Files|zhanghai/MaterialFiles|*.apk"
-  "com.emanuelef.remote_capture|PCAPdroid|emanuelef/PCAPdroid|*.apk"
-  "com.looker.droidify|Droid-ify|Droid-ify/Droid-ify|*.apk"
-  "dev.ukanth.ufirewall|AFWall+|ukanth/afwall|*.apk"
+  "com.emanuelef.remote_capture|PCAPdroid|emanuele-f/PCAPdroid|*.apk"
+  "com.looker.droidify|Droid-ify|Droid-ify/client|*.apk"
   "net.wigle.wigleandroid|WiGLE WiFi (wardriving)|wiglenet/wigle-wifi-wardriving|*.apk"
 )
 for e in "${GH_APPS[@]}"; do

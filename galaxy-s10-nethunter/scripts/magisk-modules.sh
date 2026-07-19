@@ -2,8 +2,9 @@
 # Stage the Magisk module zips to the phone's /sdcard/Download for manual install
 # in the Magisk app (Modules -> Install from storage). These can't be adb-installed
 # (they patch boot/Zygisk). Uses the maintained forks. Needs: adb, gh.  Usage: ./magisk-modules.sh
+# Note: PlayIntegrityFork/ReZygisk only matter with Google Play Services or microG — a no-op on a de-Googled phone.
 set -uo pipefail
-ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb; do
+ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb /usr/local/bin/adb /usr/lib/android-sdk/platform-tools/adb "$HOME/Android/Sdk/platform-tools/adb"; do
   command -v "$c" >/dev/null 2>&1 && { ADB="$c"; break; }; [ -x "$c" ] && { ADB="$c"; break; }; done
 [ -n "$ADB" ] || { echo "adb not found"; exit 1; }
 [ "$("$ADB" get-state 2>/dev/null)" = device ] || { echo "No device — connect adb."; exit 1; }

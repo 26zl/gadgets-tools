@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: markdownlint (project READMEs)
         run: >
-          npx --yes markdownlint-cli2
+          npx --yes markdownlint-cli2@0.23.1
           README.md flipper-feberis/README.md flipper-wifi-devboard/README.md
           galaxy-s10-nethunter/README.md m5stickc-plus2/README.md t-dongle-s3/README.md
       - name: shellcheck (project scripts)

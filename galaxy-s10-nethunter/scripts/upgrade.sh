@@ -2,15 +2,15 @@
 # Guided Kali NetHunter (re)install / LineageOS upgrade for Galaxy S10 (beyond1lte).
 # Run interactively (the vbmeta flash needs a local shell): ./upgrade.sh
 # Runs the computer-side commands, pauses for the on-phone taps. See README for details.
-# Needs: adb, heimdall (sudo port install Heimdall), gh, curl, python3.
+# Needs: adb, heimdall (sudo port install Heimdall; Linux/WSL: sudo apt install heimdall-flash), gh, curl, python3.
 set -uo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DIR="$HOME/nethunter-s10"
 
-ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb; do command -v "$c" >/dev/null 2>&1 && { ADB="$c"; break; }; [ -x "$c" ] && { ADB="$c"; break; }; done
-HD="";  for c in heimdall /opt/local/bin/heimdall; do command -v "$c" >/dev/null 2>&1 && { HD="$c"; break; }; [ -x "$c" ] && { HD="$c"; break; }; done
-[ -n "$ADB" ] || { echo "adb not found (brew install android-platform-tools)"; exit 1; }
-[ -n "$HD"  ] || { echo "heimdall not found (sudo port install Heimdall)"; exit 1; }
+ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb /usr/local/bin/adb /usr/lib/android-sdk/platform-tools/adb "$HOME/Android/Sdk/platform-tools/adb"; do command -v "$c" >/dev/null 2>&1 && { ADB="$c"; break; }; [ -x "$c" ] && { ADB="$c"; break; }; done
+HD="";  for c in heimdall /opt/local/bin/heimdall /usr/bin/heimdall; do command -v "$c" >/dev/null 2>&1 && { HD="$c"; break; }; [ -x "$c" ] && { HD="$c"; break; }; done
+[ -n "$ADB" ] || { echo "adb not found (brew install android-platform-tools; Linux/WSL: sudo apt install adb)"; exit 1; }
+[ -n "$HD"  ] || { echo "heimdall not found (sudo port install Heimdall; Linux/WSL: sudo apt install heimdall-flash)"; exit 1; }
 
 ok(){   printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
 step(){ printf '\n\033[1;36m[STEP] %s\033[0m\n' "$*"; read -rp '       Press Enter when done... ' _; }

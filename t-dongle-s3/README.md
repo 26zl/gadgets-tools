@@ -7,7 +7,7 @@ Setup for the **LilyGo T-Dongle-S3** running [USBArmyKnife](https://github.com/i
 The T-Dongle-S3 is USBArmyKnife's **recommended** board — ESP32-S3 with native USB, so it flashes straight over USB (no Flipper bridge).
 
 ## 1. Get the firmware
-Download **`LILYGO-T-Dongle-S3.Firmware.binaries.zip`** from the [USBArmyKnife releases](https://github.com/i-am-shodan/USBArmyKnife/releases). It contains `bootloader.bin`, `partitions.bin`, `firmware.bin` (ignore `firmware.elf`). You also need `boot_app0.bin` from [arduino-esp32](https://github.com/espressif/arduino-esp32/raw/master/tools/partitions/boot_app0.bin).
+Download **`LILYGO-T-Dongle-S3.Firmware.binaries.zip`** from the [USBArmyKnife releases](https://github.com/i-am-shodan/USBArmyKnife/releases). It contains `bootloader.bin`, `partitions.bin`, `firmware.bin` (ignore `firmware.elf`). You also need `boot_app0.bin` from [arduino-esp32](https://github.com/espressif/arduino-esp32/raw/3.2.0/tools/partitions/boot_app0.bin) (`flash.sh` pins this tag and checksum-verifies it).
 
 ## 2. Enter boot mode
 **Hold the side button, plug the dongle into USB, wait ~1 s, release.**
@@ -19,7 +19,7 @@ Download **`LILYGO-T-Dongle-S3.Firmware.binaries.zip`** from the [USBArmyKnife r
 pip install esptool          # if you don't have it
 ./flash.sh                   # or: ./flash.sh /dev/cu.usbmodemXXXX
 ```
-It downloads the firmware + `boot_app0.bin` and flashes at the ESP32-S3 offsets.
+It downloads the firmware + `boot_app0.bin` and flashes at the ESP32-S3 offsets. Works on macOS and Linux; on **Windows/WSL** use Option B (browser) or attach the dongle to WSL with [usbipd-win](https://github.com/dorssel/usbipd-win) first.
 
 **Option B — no tools (web flasher):**
 Open [esp.huhn.me](https://esp.huhn.me/) in Chrome/Edge → Connect → add the files at these offsets → Program:

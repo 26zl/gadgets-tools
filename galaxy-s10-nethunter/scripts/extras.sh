@@ -3,7 +3,7 @@
 # FOSS-first — F-Droid apps by package id (F-Droid API), a few via GitHub.
 # Idempotent — skips installed. Needs: adb, gh, curl, python3.  Usage: ./extras.sh
 set -uo pipefail
-ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb; do
+ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb /usr/local/bin/adb /usr/lib/android-sdk/platform-tools/adb "$HOME/Android/Sdk/platform-tools/adb"; do
   command -v "$c" >/dev/null 2>&1 && { ADB="$c"; break; }; [ -x "$c" ] && { ADB="$c"; break; }; done
 [ -n "$ADB" ] || { echo "adb not found"; exit 1; }
 [ "$("$ADB" get-state 2>/dev/null)" = device ] || { echo "No device — connect adb."; exit 1; }
@@ -35,7 +35,7 @@ fdroid com.github.libretube             "LibreTube (YouTube)"
 fdroid de.danoeh.antennapod             "AntennaPod (podcasts)"
 
 echo "== Dev / sysadmin / Linux =="
-ghub   com.foxdebug.acode "Acode (code editor)"     "deadlyjack/Acode"  "*.apk"
+ghub   com.foxdebug.acode "Acode (code editor)"     "Acode-Foundation/Acode"  "*.apk"
 fdroid org.connectbot                   "ConnectBot (SSH)"
 ghub   com.carriez.flutter_hbb "RustDesk (remote desktop)" "rustdesk/rustdesk" "*arm64*.apk"
 

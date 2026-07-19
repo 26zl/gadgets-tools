@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 """Geotag Flipper captures against a GPX track."""
-# file deepcode ignore InsecureXmlParser: DTD/ENTITY declarations are rejected before parsing (see test_rejects_dtd)
-# file deepcode ignore PT: all filesystem paths are operator-supplied CLI args to a local single-user tool
 import argparse
 import bisect
 import csv

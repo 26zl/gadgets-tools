@@ -20,7 +20,7 @@ The StickC PLUS2 is a classic ESP32 with WiFi/BLE + an IR LED — but no SubGHz/
 pip install esptool
 ./flash.sh                   # or: ./flash.sh /dev/cu.usbserial-XXXX
 ```
-Or the no-tools web flasher: [bruce.computer/flasher](https://bruce.computer/flasher) → connect → pick **M5StickC PLUS2** → Flash. Bruce ships as one merged `.bin` flashed at `0x0`.
+Or the no-tools web flasher: [bruce.computer/flasher](https://bruce.computer/flasher) → connect → pick **M5StickC PLUS2** → Flash. Bruce ships as one merged `.bin` flashed at `0x0`. `flash.sh` works on macOS/Linux; on **Windows/WSL** the web flasher is easiest (no USB passthrough), or attach the StickC with [usbipd-win](https://github.com/dorssel/usbipd-win).
 
 ## IR codes — [`ir/`](ir/)
 Universal remote database ([Lucaslhm/Flipper-IRDB](https://github.com/Lucaslhm/Flipper-IRDB), ~8900 `.ir` files) — Bruce reads Flipper `.ir` format directly.
@@ -37,7 +37,7 @@ git submodule update --init m5stickc-plus2/evil-portal   # pinned commit (add --
 Load an HTML file into Bruce's **Evil Portal** feature. **Authorized security tests only.**
 
 ## Notes
-- The StickC uses a USB-serial chip (`/dev/cu.usbserial*`).
+- The StickC uses a USB-serial chip (`/dev/cu.usbserial*` on macOS, `/dev/ttyUSB*` on Linux).
 - After flashing it boots into Bruce's menu — navigate with the two front buttons.
 
 Full docs: [Bruce firmware](https://github.com/BruceDevices/firmware) · [wiki](https://github.com/BruceDevices/firmware/wiki).

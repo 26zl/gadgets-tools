@@ -1,9 +1,0 @@
-# Snyk (https://snyk.io) policy file
-# Exclude vendored third-party git submodules from Snyk Code — we don't own or ship this code
-# (Hak5 rubber-ducky payloads, Flipper-IRDB, evil-portal templates).
-version: v1.25.0
-exclude:
-  code:
-    - t-dongle-s3/payloads/**
-    - m5stickc-plus2/ir/**
-    - m5stickc-plus2/evil-portal/**

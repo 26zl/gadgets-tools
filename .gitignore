@@ -5,16 +5,53 @@
 compile_commands.json
 /tmp/
 
-# Local tooling / editor config (machine-specific)
-.claude/
+# Editors / IDEs
 .vscode/
+.idea/
+.cache/
+*.swp
+*.swo
+*~
+*.sublime-workspace
+
+# Local tooling (machine-specific)
+.claude/
 
 # Python
 __pycache__/
-*.pyc
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+*.egg-info/
+
+# Node (CI lint tooling)
+node_modules/
+
+# Environment
+.env
+.env.local
 
 # Tool output
 geotagged.*
 
+# macOS
+.DS_Store
+.AppleDouble
+._*
+.Spotlight-V100
+.Trashes
 
-.ds_store
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+.directory
+.Trash-*
+.nfs*

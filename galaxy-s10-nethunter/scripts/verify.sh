@@ -2,11 +2,11 @@
 # adb health-check for the Galaxy S10 (beyond1lte) Kali NetHunter setup.
 # Run after a reinstall to confirm everything is in place.
 A=""
-for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb /usr/local/bin/adb; do
+for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb /usr/local/bin/adb /usr/lib/android-sdk/platform-tools/adb "$HOME/Android/Sdk/platform-tools/adb"; do
   command -v "$c" >/dev/null 2>&1 && { A="$c"; break; }
   [ -x "$c" ] && { A="$c"; break; }
 done
-[ -n "$A" ] || { echo "adb not found — install: brew install android-platform-tools"; exit 1; }
+[ -n "$A" ] || { echo "adb not found — install: brew install android-platform-tools; Linux/WSL: sudo apt install adb"; exit 1; }
 [ "$("$A" get-state 2>/dev/null)" = "device" ] || { echo "No authorized device — plug in, enable USB debugging, approve the prompt."; exit 1; }
 
 g(){ "$A" shell getprop "$1" 2>/dev/null | tr -d '\r'; }

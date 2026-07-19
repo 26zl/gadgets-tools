@@ -9,9 +9,9 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 S10="$(cd "$HERE/.." && pwd)"   # the galaxy-s10-nethunter/ dir (submodules live here)
 K=/data/local/nhsystem/kali-arm64
 
-ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb; do
+ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb /usr/local/bin/adb /usr/lib/android-sdk/platform-tools/adb "$HOME/Android/Sdk/platform-tools/adb"; do
   command -v "$c" >/dev/null 2>&1 && { ADB="$c"; break; }; [ -x "$c" ] && { ADB="$c"; break; }; done
-[ -n "$ADB" ] || { echo "adb not found (brew install android-platform-tools)"; exit 1; }
+[ -n "$ADB" ] || { echo "adb not found (brew install android-platform-tools; Linux/WSL: sudo apt install adb)"; exit 1; }
 [ "$("$ADB" get-state 2>/dev/null)" = device ] || { echo "No device — connect adb (USB or wireless) and approve the prompt."; exit 1; }
 step(){ printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
 

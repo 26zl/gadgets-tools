@@ -6,7 +6,7 @@
 #   ./sdcard.sh push <file>...        # copy Mac file(s) -> SD
 #   ./sdcard.sh move <phone-path>...  # move an on-phone file -> SD (frees internal)
 set -uo pipefail
-ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb; do
+ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebrew/bin/adb /usr/local/bin/adb /usr/lib/android-sdk/platform-tools/adb "$HOME/Android/Sdk/platform-tools/adb"; do
   command -v "$c" >/dev/null 2>&1 && { ADB="$c"; break; }; [ -x "$c" ] && { ADB="$c"; break; }; done
 [ -n "$ADB" ] || { echo "adb not found"; exit 1; }
 [ "$("$ADB" get-state 2>/dev/null)" = device ] || { echo "No device — connect adb."; exit 1; }

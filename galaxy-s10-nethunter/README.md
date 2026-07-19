@@ -12,6 +12,7 @@ Kali NetHunter on a **Samsung Galaxy S10 — SM-G973F (`beyond1lte`, Exynos)**, 
 | External WiFi | ALFA AWUS036ACS (RTL8811AU) → `wlan2` — monitor **+ injection** |
 | GPS | HiLetgo VK172 (u-blox 7) → `/dev/ttyACM0` — 3D fix |
 | Host link | wireless adb (Android 11+ Wireless Debugging) — frees USB-C for the hub |
+| Google | **none — de-Googled** (no Play Services / Play Store); Aurora Store for apps, microG optional |
 
 ## Magisk version
 
@@ -19,10 +20,13 @@ The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-net
 
 ## Tools
 
-**Host (macOS):**
+**Host (macOS / Linux / WSL):**
 
-- **Heimdall** via **MacPorts** (Homebrew's formula + cask are both dead): `sudo port install Heimdall`
-- `adb` (Android platform-tools) · `gh` (GitHub CLI) · `curl` · `python3`
+- **adb** (Android platform-tools) — macOS `brew install android-platform-tools` · Debian/Ubuntu/WSL `sudo apt install adb`
+- **Heimdall** — macOS `sudo port install Heimdall` (MacPorts; Homebrew's formula + cask are dead) · Debian/Ubuntu/WSL `sudo apt install heimdall-flash`
+- `gh` (GitHub CLI) · `curl` · `python3`
+
+> **WSL:** wireless adb (`adb pair` / `adb connect`) works out of the box, so the day-to-day provisioning (`apps.sh`, `setup.sh`, `sdcard.sh`, …) runs fine. Only the reinstall's USB steps (Heimdall flash, USB adb) need the phone attached to WSL via [usbipd-win](https://github.com/dorssel/usbipd-win) — or run those from Windows.
 
 **Hardware:**
 
@@ -53,7 +57,7 @@ My own tools that run on the phone, pulled in as submodules (`git submodule upda
 | [`netsec-auditor/`](netsec-auditor/) | Scope-gated network / OT-ICS / IoT / Wi-Fi auditor (Python CLI, JSON/HTML/PDF reports) |
 | [`cybersec-toolkit/`](cybersec-toolkit/) | Modular installer for 580+ security tools (Linux + Termux) + an MCP server |
 
-**Running `netsec-auditor` in the chroot.** Once the repo is public, install it straight in the Kali terminal (see netsec-auditor's own README for the full guide):
+**Running `netsec-auditor` in the chroot.** Install it straight in the Kali terminal (see netsec-auditor's own README for the full guide):
 
 ```bash
 apt install -y nmap pipx bluez
@@ -62,7 +66,7 @@ pipx install ".[wireless]"        # ".[all]" adds BLE + PDF
 netsec-auditor doctor
 ```
 
-While it's still **private** the phone has no git creds, so ship the source over adb instead:
+No network in the chroot? Ship the source over adb instead:
 
 ```bash
 git -C netsec-auditor archive HEAD -o /tmp/na.tar
@@ -83,21 +87,27 @@ Installed via adb from official sources (GitHub / GitLab / F-Droid).
 | --- | --- |
 | App stores | [F-Droid](https://f-droid.org) · [Droid-ify](https://github.com/Droid-ify/client) · [Aurora Store](https://gitlab.com/AuroraOSS/AuroraStore) (anon Play) · [Obtainium](https://github.com/ImranR98/Obtainium) (GitHub-release installer) |
 | Terminal | [Termux](https://github.com/termux/termux-app) + [Termux:API](https://github.com/termux/termux-api) + [Termux:Boot](https://github.com/termux/termux-boot) |
-| Network / privacy | [RethinkDNS](https://github.com/celzero/rethink-app) (firewall + DNS block + WireGuard) · [AFWall+](https://github.com/ukanth/afwall) (iptables firewall) · [AdAway](https://github.com/AdAway/AdAway) (systemless hosts) · [Mullvad VPN](https://github.com/mullvad/mullvadvpn-app) · [PCAPdroid](https://github.com/emanuelef/PCAPdroid) (packet capture) · [WiGLE WiFi](https://github.com/wiglenet/wigle-wifi-wardriving) (wardriving / GPS logging) |
+| Network / privacy | [RethinkDNS](https://github.com/celzero/rethink-app) (firewall + DNS block + WireGuard) · [AdAway](https://github.com/AdAway/AdAway) (systemless hosts) · [Mullvad VPN](https://github.com/mullvad/mullvadvpn-app) · [PCAPdroid](https://github.com/emanuele-f/PCAPdroid) (packet capture) · [WiGLE WiFi](https://github.com/wiglenet/wigle-wifi-wardriving) (wardriving / GPS logging) |
 | Browser | [Cromite](https://github.com/uazo/cromite) (hardened Chromium; [IronFox](https://gitlab.com/ironfox-oss/IronFox) = hardened Firefox alt) |
 | Files / apps / cleanup | [Material Files](https://github.com/zhanghai/MaterialFiles) (root file mgr) · [App Manager](https://github.com/MuntashirAkon/AppManager) · [SD Maid SE](https://github.com/d4rken-org/sdmaid-se) |
-| Root helpers | [Shizuku](https://github.com/RikkaApps/Shizuku) (elevated APIs w/o full root) · [AccA](https://github.com/MatteCarra/AccA) (charging control) |
+| Root helpers | [Shizuku](https://github.com/RikkaApps/Shizuku) (elevated APIs w/o full root) |
 | Root manager | [Magisk](https://github.com/topjohnwu/Magisk) (from the base install) |
+
+> **Termux** (+ API/Boot) installs from **GitHub only** for the latest build — the three share one `com.termux` signature, so `apps.sh` never mixes sources. Only ever update Termux from its official GitHub releases (that build is signed with a shared community test key).
+
+**Add your own apps:** in `apps.sh` append a line to the `GH_APPS` array — `pkgid|Label|owner/repo|apk-glob`. In `extras.sh` call `fdroid <pkgid> "Label"` (F-Droid) or `ghub <pkgid> "Label" <owner/repo> "<glob>"` (GitHub). One line per app.
 
 ### Magisk modules (`./scripts/magisk-modules.sh` → staged to `/sdcard/Download`)
 
 Can't be adb-installed — install in **Magisk → Modules → Install from storage → reboot**. Enable **Zygisk** first; add banking/sensitive apps to the **DenyList** (Shamiko enforces the hiding).
 
+> **Optional — this build is de-Googled** (no Play Services / Store). **PlayIntegrityFork/ReZygisk are a no-op without Google** — they only do anything if you add **microG** or GApps. LSPosed (Xposed) works regardless.
+
 | Module | Purpose |
 | --- | --- |
 | [LSPosed (Vector)](https://github.com/JingMatrix/LSPosed) | Xposed framework, Android 16 fork |
 | [Shamiko](https://github.com/LSPosed/LSPosed.github.io/releases) | hide root from detection |
-| [PlayIntegrityFork (PIF)](https://github.com/osm0sis/PlayIntegrityFork) | pass Play Integrity for banking / Play apps |
+| [PlayIntegrityFork (PIF)](https://github.com/osm0sis/PlayIntegrityFork) | pass Play Integrity — **only with Google/microG** (no-op on this de-Googled build) |
 | [ReZygisk](https://github.com/PerformanC/ReZygisk) | stronger Zygisk implementation — if used, **disable Magisk's built-in Zygisk** |
 
 > Basic/Device integrity works for most apps; **Strong** (hardware-backed) integrity needs TrickyStore + a keybox — advanced and a moving target.
@@ -109,14 +119,14 @@ Base image ships `nmap` · aircrack-ng suite · `wifite` · `reaver` · `kismet`
 ### Hardening applied
 
 - **Private DNS** → `base.dns.mullvad.net` ([Mullvad DoT](https://mullvad.net/en/help/dns-over-https-and-dns-over-tls) — blocks ads/trackers/malware), set via `settings put global private_dns_mode hostname` + `private_dns_specifier`.
-- Firewall (RethinkDNS / AFWall+), root-hiding modules, and app-permission review are **installed, but you configure** them to taste.
+- Firewall (RethinkDNS) and app-permission review are **installed, but you configure** them to taste.
 
 ### Daily / non-cybersec apps (`./scripts/extras.sh`)
 
 | Category | Apps |
 | --- | --- |
 | Media / torrent | [LibreTorrent](https://github.com/proninyaroslav/libretorrent) · [LibreTube](https://github.com/libre-tube/LibreTube) · [AntennaPod](https://github.com/AntennaPod/AntennaPod) · [VLC](https://www.videolan.org/vlc/)\* · [Stremio](https://www.stremio.com)\* |
-| Dev / sysadmin | [Acode](https://github.com/deadlyjack/Acode) (editor) · [ConnectBot](https://github.com/connectbot/connectbot) (SSH) · [RustDesk](https://github.com/rustdesk/rustdesk) (remote desktop) · [WireGuard](https://www.wireguard.com)\* · [Termux](https://github.com/termux/termux-app) |
+| Dev / sysadmin | [Acode](https://github.com/Acode-Foundation/Acode) (editor) · [ConnectBot](https://github.com/connectbot/connectbot) (SSH) · [RustDesk](https://github.com/rustdesk/rustdesk) (remote desktop) · [WireGuard](https://www.wireguard.com)\* · [Termux](https://github.com/termux/termux-app) |
 | Daily / general | [Aegis](https://github.com/beemdevelopment/Aegis) (2FA) · [KeePassDX](https://github.com/Kunzisoft/KeePassDX) (passwords) · [Organic Maps](https://github.com/organicmaps/organicmaps) · [Joplin](https://joplinapp.org) (notes) · [Breezy Weather](https://github.com/breezy-weather/breezy-weather) · [KOReader](https://github.com/koreader/koreader) (ebooks) |
 
 *\* VLC / WireGuard = one tap in F-Droid (multi-abi builds); Stremio from [stremio.com](https://www.stremio.com) (torrent streaming via the Torrentio addon). Dev shell = Termux: `pkg install nodejs python go rust git neovim tmux openssh`.*
