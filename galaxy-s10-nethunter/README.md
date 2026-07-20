@@ -48,6 +48,7 @@ The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-net
 | `sdcard.sh` | shuttle files to the microSD to save internal storage — `info` / `push` / `move` |
 | `extras.sh` | install non-cybersec apps — media/torrent, dev/sysadmin, daily (FOSS-first) |
 | `ssh-setup.sh` | key-only SSH into the Kali chroot — runs as **root** (reachable past a per-app VPN; auto-starts on boot via Magisk `service.d`). Stable alternative to wireless adb for Kali work; Android app-management (`pm`/`am`) still via adb |
+| `ai-setup.sh` | **on-device AI in the chroot** — Claude Code CLI (`claude`) + a local llama.cpp model (`llm` / `llmf`), both on-demand. Run over SSH: `ssh s10 'bash -s' < scripts/ai-setup.sh` |
 
 ## Bundled tools (submodules)
 
@@ -117,6 +118,23 @@ Can't be adb-installed — install in **Magisk → Modules → Install from stor
 Base image ships `nmap` · aircrack-ng suite · `wifite` · `reaver` · `kismet` · `bettercap` · `gpsd`. `setup.sh` adds `masscan` · `pipx` · `gpsd-clients` and installs **netsec-auditor**. Health-check the whole rig with `scripts/phone-doctor.sh`.
 
 > **Upgrading the chroot:** systemd v260+ can't configure on this device's 4.14 kernel ([systemd #41250](https://github.com/systemd/systemd/issues/41250) — `openat2` unsupported → `Protocol driver not attached`), so the systemd stack is **held** (`apt-mark hold systemd systemd-sysv udev libsystemd0 libpam-systemd`) to keep `dpkg` consistent. Run big upgrades with `TMPDIR=/tmp` and a `policy-rc.d` returning `101` (standard chroot practice — blocks service starts) to avoid `mktemp` / service-start failures.
+
+### On-device AI (`./scripts/ai-setup.sh`)
+
+Two AI tools inside the Kali chroot, both **on-demand** — nothing runs in the background, and RAM is freed the moment they exit. Install both with `ssh s10 'bash -s' < scripts/ai-setup.sh` (over the [`ssh-setup.sh`](scripts/ssh-setup.sh) channel) or by pasting it in the NetHunter terminal; it's idempotent.
+
+| Command | What | Speed |
+| --- | --- | --- |
+| `claude` | **Claude Code** — Anthropic API client (full model; needs internet + login, run once to auth). The tool for real work. | network |
+| `llm "..."` | local **Llama-3.2-3B** Q4_K_M — better quality | ~3.7 tok/s |
+| `llmf "..."` | local **Llama-3.2-1B** Q4_K_M — fast, but weak | ~8 tok/s |
+
+`llm` / `llmf` with no argument = interactive chat (`/exit` to quit). Models live in `/opt/models`, llama.cpp in `/opt/llama.cpp` (~2.7 GB total). The local models are for **offline / private / quick** use only — neither rivals Claude Code, so for anything that matters use `claude`.
+
+**Two Exynos-9820 lessons are baked into `ai-setup.sh`:**
+
+- **Force dotprod at build time.** `cmake -DGGML_NATIVE=ON` (`-march=native`) does *not* enable dotprod — GCC doesn't recognise Samsung's custom **M4** core, so it falls back to generic `armv8-a` (scalar, ~2 tok/s). Build explicitly for `-DGGML_CPU_ARM_ARCH=armv8.2-a+dotprod+fp16`.
+- **Exclude the M4 cores.** The two Mongoose **M4** cores (cpu 6-7) throttle erratically and stall llama.cpp's per-token thread barrier; pinning to cores **0-5** (4×A55 + 2×A75) with `taskset -c 0-5 -t 6` roughly **doubles** throughput vs all 8 cores or the "fast" cores 4-7.
 
 ### Hardening applied
 

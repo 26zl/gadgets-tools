@@ -71,6 +71,15 @@ else
   inf "netsec-auditor not installed — see galaxy-s10-nethunter/README.md"
 fi
 
+echo "== On-device AI (chroot) =="
+[ -d "$K/root/.local/share/claude" ] && ok "Claude Code CLI (claude)" || inf "Claude Code not installed — see ai-setup.sh"
+if [ -f "$K/usr/local/bin/llm" ] && [ -f "$K/usr/local/bin/llmf" ]; then
+  ng=0; for g in "$K"/opt/models/*.gguf; do [ -e "$g" ] && ng=$((ng+1)); done
+  ok "local LLM (llm/llmf) + ${ng} model(s)"
+else
+  inf "local LLM (llm/llmf) not installed — see ai-setup.sh"
+fi
+
 echo
 if [ "$fail" = 0 ]; then printf '\033[32mAll good\033[0m — %s checks OK.\n' "$pass"
 else printf '\033[31m%s problem(s)\033[0m, %s OK — see the !! lines.\n' "$fail" "$pass"; fi
