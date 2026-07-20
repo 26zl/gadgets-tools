@@ -14,6 +14,14 @@ The dashboard works offline over its own access point, and its GPX track feeds t
 
 ---
 
+## The Feberis Pro & firmware options
+
+The [Feberis Pro](https://sapsan-docs.com/brands/sapsan/feberis-pro/docs/) (Sapsan) is a Flipper Zero GPIO module packing 2× CC1101 (Sub-GHz), an NRF24, an **ESP32** (2.4 GHz WiFi) and a **GPS**. Sapsan officially supports two ESP32 firmwares: **Marauder** (pre-installed) and **[GhostESP](https://ghostesp.net/)** — the feature-rich one, with a dedicated Feberis Pro build (full WiFi/BLE/GPS offensive toolset: deauth, evil portal, beacon spam, BLE wardrive, …).
+
+**This repo's firmware is a third, deliberately narrow option:** it uses **only the ESP32 + GPS** for WiFi wardriving/recon — live scan, offline dashboard, and WiGLE CSV / GPX export. Flash **GhostESP** when you want the full toolset; flash **this** when you just want clean WiFi + GPS logging that feeds the `geotag` tool.
+
+Either flashes from the Flipper's **ESP Flasher** app (bundled with [Momentum](https://momentum-fw.dev/), the Flipper firmware used here) → set the Feberis switch to **ESP32** → Manual Flash.
+
 ## Firmware (ESP32)
 
 - live GPS fix + satellite count, buffer usage, free heap, scan state
@@ -29,7 +37,7 @@ The track stores about 1000 points and downsamples automatically while displayin
 pio run          # -> .pio/build/esp32dev/{firmware,bootloader,partitions}.bin
 ```
 
-Open the `flipper-feberis/` folder directly in PlatformIO — `platformio.ini` is here.
+Open the `flipper/flipper-feberis/` folder directly in PlatformIO — `platformio.ini` is here.
 
 The platform and library versions are pinned in `platformio.ini` for reproducible builds.
 
@@ -80,7 +88,7 @@ Change the SSID/pins at the top of `src/main.cpp`.
 
 After a session you have a GPX track (from the firmware) and Flipper captures on the SD card:
 
-Run from `flipper-feberis/`:
+Run from `flipper/flipper-feberis/`:
 
 ```bash
 python3 -m geotag TRACK.gpx /path/to/flipper/subghz --tol 30 --out session
@@ -133,4 +141,4 @@ before you rely on it in the field — each item is **do this → expect this**:
 
 ---
 
-MIT licensed — see [LICENSE](../LICENSE).
+MIT licensed — see [LICENSE](../../LICENSE).

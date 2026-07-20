@@ -47,6 +47,7 @@ The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-net
 | `magisk-modules.sh` | stage the Magisk module zips (LSPosed/Vector, Shamiko, PIF, ReZygisk) → `/sdcard/Download` |
 | `sdcard.sh` | shuttle files to the microSD to save internal storage — `info` / `push` / `move` |
 | `extras.sh` | install non-cybersec apps — media/torrent, dev/sysadmin, daily (FOSS-first) |
+| `ssh-setup.sh` | key-only SSH into the Kali chroot — runs as **root** (reachable past a per-app VPN; auto-starts on boot via Magisk `service.d`). Stable alternative to wireless adb for Kali work; Android app-management (`pm`/`am`) still via adb |
 
 ## Bundled tools (submodules)
 
@@ -87,10 +88,9 @@ Installed via adb from official sources (GitHub / GitLab / F-Droid).
 | --- | --- |
 | App stores | [F-Droid](https://f-droid.org) · [Droid-ify](https://github.com/Droid-ify/client) · [Aurora Store](https://gitlab.com/AuroraOSS/AuroraStore) (anon Play) · [Obtainium](https://github.com/ImranR98/Obtainium) (GitHub-release installer) |
 | Terminal | [Termux](https://github.com/termux/termux-app) + [Termux:API](https://github.com/termux/termux-api) + [Termux:Boot](https://github.com/termux/termux-boot) |
-| Network / privacy | [RethinkDNS](https://github.com/celzero/rethink-app) (firewall + DNS block + WireGuard) · [AdAway](https://github.com/AdAway/AdAway) (systemless hosts) · [Mullvad VPN](https://github.com/mullvad/mullvadvpn-app) · [PCAPdroid](https://github.com/emanuele-f/PCAPdroid) (packet capture) · [WiGLE WiFi](https://github.com/wiglenet/wigle-wifi-wardriving) (wardriving / GPS logging) |
+| Network / privacy | [AdAway](https://github.com/AdAway/AdAway) (systemless hosts) · [Mullvad VPN](https://github.com/mullvad/mullvadvpn-app) · [PCAPdroid](https://github.com/emanuele-f/PCAPdroid) (packet capture) · [WiGLE WiFi](https://github.com/wiglenet/wigle-wifi-wardriving) (wardriving / GPS logging) |
 | Browser | [Cromite](https://github.com/uazo/cromite) (hardened Chromium; [IronFox](https://gitlab.com/ironfox-oss/IronFox) = hardened Firefox alt) |
 | Files / apps / cleanup | [Material Files](https://github.com/zhanghai/MaterialFiles) (root file mgr) · [App Manager](https://github.com/MuntashirAkon/AppManager) · [SD Maid SE](https://github.com/d4rken-org/sdmaid-se) |
-| Root helpers | [Shizuku](https://github.com/RikkaApps/Shizuku) (elevated APIs w/o full root) |
 | Root manager | [Magisk](https://github.com/topjohnwu/Magisk) (from the base install) |
 
 > **Termux** (+ API/Boot) installs from **GitHub only** for the latest build — the three share one `com.termux` signature, so `apps.sh` never mixes sources. Only ever update Termux from its official GitHub releases (that build is signed with a shared community test key).
@@ -116,10 +116,12 @@ Can't be adb-installed — install in **Magisk → Modules → Install from stor
 
 Base image ships `nmap` · aircrack-ng suite · `wifite` · `reaver` · `kismet` · `bettercap` · `gpsd`. `setup.sh` adds `masscan` · `pipx` · `gpsd-clients` and installs **netsec-auditor**. Health-check the whole rig with `scripts/phone-doctor.sh`.
 
+> **Upgrading the chroot:** systemd v260+ can't configure on this device's 4.14 kernel ([systemd #41250](https://github.com/systemd/systemd/issues/41250) — `openat2` unsupported → `Protocol driver not attached`), so the systemd stack is **held** (`apt-mark hold systemd systemd-sysv udev libsystemd0 libpam-systemd`) to keep `dpkg` consistent. Run big upgrades with `TMPDIR=/tmp` and a `policy-rc.d` returning `101` (standard chroot practice — blocks service starts) to avoid `mktemp` / service-start failures.
+
 ### Hardening applied
 
 - **Private DNS** → `base.dns.mullvad.net` ([Mullvad DoT](https://mullvad.net/en/help/dns-over-https-and-dns-over-tls) — blocks ads/trackers/malware), set via `settings put global private_dns_mode hostname` + `private_dns_specifier`.
-- Firewall (RethinkDNS) and app-permission review are **installed, but you configure** them to taste.
+- Ad/tracker/malware blocking is handled at the DNS layer by Mullvad Private DNS (above); app-permission review is up to you. No app-firewall is installed.
 
 ### Daily / non-cybersec apps (`./scripts/extras.sh`)
 

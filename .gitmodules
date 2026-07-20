@@ -13,3 +13,12 @@
 [submodule "galaxy-s10-nethunter/cybersec-toolkit"]
 	path = galaxy-s10-nethunter/cybersec-toolkit
 	url = https://github.com/26zl/cybersec-toolkit.git
+[submodule "flipper/Momentum-Firmware"]
+	path = flipper/Momentum-Firmware
+	url = https://github.com/Next-Flip/Momentum-Firmware
+[submodule "flipper/GhostESP"]
+	path = flipper/GhostESP
+	url = https://github.com/GhostESP-Revival/GhostESP
+[submodule "flipper/ESP32Marauder"]
+	path = flipper/ESP32Marauder
+	url = https://github.com/justcallmekoko/ESP32Marauder

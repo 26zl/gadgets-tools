@@ -16,6 +16,7 @@ compile_commands.json
 
 # Local tooling (machine-specific)
 .claude/
+scratchpad/
 
 # Python
 __pycache__/

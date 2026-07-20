@@ -58,9 +58,7 @@ done
 GH_APPS=(
   "dev.imranr.obtainium|Obtainium|ImranR98/Obtainium|*arm64-v8a-release.apk"
   "org.adaway|AdAway|AdAway/AdAway|*.apk"
-  "com.celzero.bravedns|RethinkDNS|celzero/rethink-app|*website*.apk"
   "eu.darken.sdmse|SD Maid SE|d4rken-org/sdmaid-se|*foss-release.apk"
-  "moe.shizuku.privileged.api|Shizuku|RikkaApps/Shizuku|shizuku-*.apk"
   "io.github.muntashirakon.AppManager|App Manager|MuntashirAkon/AppManager|AppManager_v*.apk"
   "net.mullvad.mullvadvpn|Mullvad VPN|mullvad/mullvadvpn-app|MullvadVPN-*.apk"
   "org.cromite.cromite|Cromite|uazo/cromite|arm64_ChromePublic.apk"
