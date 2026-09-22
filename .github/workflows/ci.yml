@@ -11,7 +11,7 @@ jobs:
       run:
         working-directory: flipper/flipper-feberis
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -54,7 +54,7 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: markdownlint (project READMEs)
         run: >
           npx --yes markdownlint-cli2@0.23.1
