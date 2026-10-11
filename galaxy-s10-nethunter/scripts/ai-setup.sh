@@ -26,19 +26,36 @@ set -uo pipefail
 command -v apt-get >/dev/null 2>&1 || { echo "Run this INSIDE the Kali chroot (no apt-get here)."; exit 1; }
 [ "$(id -u)" = 0 ] || { echo "Run as root inside the chroot."; exit 1; }
 step(){ printf '\n\033[1;36m==> %s\033[0m\n' "$*"; }
+sha256(){ command -v sha256sum >/dev/null 2>&1 && sha256sum "$@" || shasum -a 256 "$@"; }
 
 LLAMA_SRC=/opt/llama.cpp
 MODELS=/opt/models
+# Pinned to a specific llama.cpp commit (full 40-char SHA) so the build step cannot clone a mutable
+# HEAD and let upstream change the build inputs. Bump to a newer master commit as needed.
+LLAMA_COMMIT="a9d27ac693ff0a1d3cba449c912c2b891904a4c7"
 M3="$MODELS/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 M1="$MODELS/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
 M3_URL="https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 M1_URL="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+# TODO(maintainer): set these to the SHA256 published on each model's Hugging Face page so the
+# download is verified; left empty the script warns and keeps the file (these are large).
+M3_SHA256=""
+M1_SHA256=""
 
 step "1/6  Claude Code CLI"
 if command -v claude >/dev/null 2>&1; then
   echo "    already installed: $(claude --version 2>/dev/null | head -1)"
 else
-  curl -fsSL https://claude.ai/install.sh | bash || echo "    (claude install returned nonzero — check network)"
+  # Download the installer to a file and run that file, instead of piping curl into a root shell,
+  # so the fetched script can be inspected or verified before it executes.
+  # TODO(maintainer): verify the installer against a trusted SHA256 before running it.
+  installer="$(mktemp)"
+  if curl -fsSL -o "$installer" https://claude.ai/install.sh; then
+    bash "$installer" || echo "    (claude install returned nonzero — check network)"
+  else
+    echo "    (could not download the installer — check network)"
+  fi
+  rm -f "$installer"
 fi
 # Symlink so `claude` resolves in ANY shell, not just an interactive zsh that sources ~/.zshrc.
 [ -x /root/.local/bin/claude ] && ln -sf /root/.local/bin/claude /usr/local/bin/claude
@@ -49,7 +66,12 @@ export DEBIAN_FRONTEND=noninteractive
 apt-get install -y --no-install-recommends build-essential cmake git curl libcurl4-openssl-dev 2>&1 | tail -3
 
 step "3/6  Build llama.cpp with dotprod forced (see header note #1)"
-[ -d "$LLAMA_SRC/.git" ] || git clone --depth=1 https://github.com/ggml-org/llama.cpp "$LLAMA_SRC"
+if [ ! -d "$LLAMA_SRC/.git" ]; then
+  [ -n "$LLAMA_COMMIT" ] || { echo "LLAMA_COMMIT is unset — edit ai-setup.sh to pin a reviewed commit (see TODO)."; exit 1; }
+  # Blobless partial clone keeps it lean while still allowing checkout of the pinned commit.
+  git clone --filter=blob:none https://github.com/ggml-org/llama.cpp "$LLAMA_SRC" || { echo "llama.cpp clone failed"; exit 1; }
+  git -C "$LLAMA_SRC" checkout --detach "$LLAMA_COMMIT" || { echo "cannot check out $LLAMA_COMMIT"; exit 1; }
+fi
 cd "$LLAMA_SRC" || { echo "cannot enter $LLAMA_SRC"; exit 1; }
 if [ ! -x build/bin/llama-cli ]; then
   cmake -B build -DGGML_NATIVE=OFF -DGGML_CPU_ARM_ARCH="armv8.2-a+dotprod+fp16" \
@@ -61,14 +83,22 @@ echo "    llama-cli -> $(command -v llama-cli)  (arch: $(grep -hoE 'march=armv8[
 
 step "4/6  Download models (~2.7 GB: 3B + 1B)"
 mkdir -p "$MODELS"
-for pair in "$M3|$M3_URL" "$M1|$M1_URL"; do
-  f="${pair%%|*}"; url="${pair##*|}"
+for pair in "$M3|$M3_URL|$M3_SHA256" "$M1|$M1_URL|$M1_SHA256"; do
+  f="${pair%%|*}"; rest="${pair#*|}"; url="${rest%%|*}"; want="${rest##*|}"
   if [ -s "$f" ]; then
     echo "    have $(basename "$f")"
+    continue
+  fi
+  echo "    fetching $(basename "$f") ..."
+  if ! curl -L --fail --retry 3 -o "$f" "$url"; then
+    echo "    !! download failed: $url"; rm -f "$f"; continue
+  fi
+  if [ -z "$want" ]; then
+    echo "    -> $(du -h "$f" | cut -f1)  !! not checksum-verified (set its SHA256 — see TODO)"
+  elif [ "$(sha256 "$f" | awk '{print $1}')" = "$want" ]; then
+    echo "    -> $(du -h "$f" | cut -f1), sha256 ok"
   else
-    echo "    fetching $(basename "$f") ..."
-    curl -L --fail --retry 3 -o "$f" "$url" && echo "    -> $(du -h "$f" | cut -f1)" \
-      || echo "    !! download failed: $url"
+    echo "    !! sha256 mismatch for $(basename "$f") — removing"; rm -f "$f"
   fi
 done
 
