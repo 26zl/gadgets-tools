@@ -4,12 +4,11 @@ set -euo pipefail
 
 REPO="BruceDevices/firmware"
 ASSET="Bruce-m5stack-cplus2.bin"
-# Firmware is pinned to a tested release and its published SHA256 is verified before flashing.
-# TODO(maintainer): set TAG to the release tag you tested and ASSET_SHA256 to that release's
-# published SHA256 for "$ASSET". The script refuses to flash until both are set, so it never
-# flashes an unpinned "latest" or an unverified image.
-TAG=""
-ASSET_SHA256=""
+# Firmware is pinned to a tested release and its published SHA256 is verified before flashing, so
+# the script never flashes an unpinned "latest" or an unverified image. To bump: pick a release
+# tag, download "$ASSET" from it, and set ASSET_SHA256 to that file's sha256.
+TAG="1.16.1"
+ASSET_SHA256="1b99c588d57b5c33baf61a5ca2d24122cc3835a74a65553142ac3513f729efe0"
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
 sha256() { command -v sha256sum >/dev/null 2>&1 && sha256sum "$@" || shasum -a 256 "$@"; }

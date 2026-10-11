@@ -4,12 +4,11 @@ set -euo pipefail
 
 REPO="i-am-shodan/USBArmyKnife"
 ASSET="LILYGO-T-Dongle-S3.Firmware.binaries.zip"
-# Firmware is pinned to a tested release and its published SHA256 is verified before flashing.
-# TODO(maintainer): set TAG to the release tag you tested and ASSET_SHA256 to that release's
-# published SHA256 for "$ASSET". The script refuses to flash until both are set, so it never
-# flashes an unpinned "latest" or an unverified firmware.
-TAG=""
-ASSET_SHA256=""
+# Firmware is pinned to a tested release and its published SHA256 is verified before flashing, so
+# the script never flashes an unpinned "latest" or an unverified firmware. To bump: pick a release
+# tag, download "$ASSET" from it, and set ASSET_SHA256 to that file's sha256.
+TAG="v1.1.5"
+ASSET_SHA256="de153d2031c831d0154cba7757b2781a54ce2970ba556adec5c4ce6533adcba7"
 # boot_app0 is pinned to a release tag + checksum (was a mutable 'master' ref).
 BOOT_APP0_URL="https://raw.githubusercontent.com/espressif/arduino-esp32/3.2.0/tools/partitions/boot_app0.bin"
 BOOT_APP0_SHA256="f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"

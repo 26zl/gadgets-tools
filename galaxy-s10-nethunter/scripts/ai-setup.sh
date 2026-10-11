@@ -30,9 +30,9 @@ sha256(){ command -v sha256sum >/dev/null 2>&1 && sha256sum "$@" || shasum -a 25
 
 LLAMA_SRC=/opt/llama.cpp
 MODELS=/opt/models
-# TODO(maintainer): pin to a reviewed llama.cpp commit (full 40-char SHA) you have built; the
-# build step refuses to clone an unpinned HEAD so upstream cannot change the build inputs.
-LLAMA_COMMIT=""
+# Pinned to a specific llama.cpp commit (full 40-char SHA) so the build step cannot clone a mutable
+# HEAD and let upstream change the build inputs. Bump to a newer master commit as needed.
+LLAMA_COMMIT="a9d27ac693ff0a1d3cba449c912c2b891904a4c7"
 M3="$MODELS/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 M1="$MODELS/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
 M3_URL="https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
