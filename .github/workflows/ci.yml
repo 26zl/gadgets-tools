@@ -11,8 +11,8 @@ jobs:
       run:
         working-directory: flipper/flipper-feberis
     steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-python@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: "3.12"
 
@@ -29,7 +29,7 @@ jobs:
         run: c++ -std=c++17 -O2 tests/format_test.cpp -o /tmp/fmt && /tmp/fmt
 
       - name: Cache PlatformIO
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.platformio
@@ -44,7 +44,7 @@ jobs:
           cat firmware.bin.sha256
 
       - name: Publish firmware + checksum
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: firmware
           path: |
@@ -54,7 +54,7 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - name: markdownlint (project READMEs)
         run: >
           npx --yes markdownlint-cli2@0.23.1
