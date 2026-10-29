@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/26zl/gadgets-tools/security/advisories/new
+    about: Report security issues privately, not as a public issue. See SECURITY.md.
+  - name: Upstream firmware / library issue
+    url: https://github.com/26zl/gadgets-tools/blob/main/CONTRIBUTING.md
+    about: Bugs in Momentum, GhostESP, ESP32Marauder, Bruce, USBArmyKnife, or payload/IR libraries belong upstream.
