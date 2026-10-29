@@ -41,13 +41,17 @@ Unplug/replug. The dongle brings up its own WiFi AP — join it, then open the w
 
 Set the AP SSID and password in the web-UI preferences.
 
+## Known: false "crash dump" after flashing (v1.1.5)
+
+Right after flashing, the dongle may show a red **"Task dump — raise a bug!"** screen with a short address list. On USBArmyKnife **v1.1.5** this is a **false positive**: esptool resets the chip over USB-JTAG after writing, and v1.1.5 misreads that reset reason (`ESP_RST_EXT`/`ESP_RST_JTAG`) as a crash ([issue #272](https://github.com/i-am-shodan/USBArmyKnife/issues/272), fixed by [#274](https://github.com/i-am-shodan/USBArmyKnife/pull/274) — merged to `master`, not yet in a release). **Fully unplug and replug the dongle** for a clean power-on reset and it boots normally; the addresses are just the idle BLE task, not a real fault.
+
 ## Payloads
 Community DuckyScript payloads live in [`payloads/`](payloads/) — a git submodule of the official [Hak5 library](https://github.com/hak5/usbrubberducky-payloads).
 
 ```bash
 git submodule update --init t-dongle-s3/payloads   # checkout the pinned commit (add --remote to update)
 ```
-A fresh `git clone` of this repo needs `--recursive`, or run the command above once.
+After a fresh clone, run the command above to initialize just this payload library.
 
 Load a payload's DuckyScript into the USBArmyKnife web UI. **⚠️ Read it first** — some download and run remote code. Authorized targets only.
 

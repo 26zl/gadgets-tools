@@ -92,7 +92,7 @@ Run from `flipper/flipper-feberis/`:
 
 ```bash
 python3 -m geotag TRACK.gpx /path/to/flipper/subghz --tol 30 --out session
-# -> session.csv and session.geojson  (written atomically, 0600)
+# -> session.csv and session.geojson  (each file replaced atomically, 0600)
 ```
 
 - capture time = each file's modification time (the Flipper's RTC sets it on save), so read files

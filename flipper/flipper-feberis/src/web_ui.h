@@ -1,7 +1,7 @@
 // Embedded dashboard with safe DOM rendering.
 #pragma once
 
-static const char INDEX_HTML[] PROGMEM = R"HTML(<!doctype html><html><head>
+static const char INDEX_HTML[] PROGMEM = R"HTML(<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; connect-src 'self'">
 <title>Feberis Recon</title><style>

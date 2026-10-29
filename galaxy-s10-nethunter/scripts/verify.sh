@@ -12,7 +12,8 @@ done
 g(){ "$A" shell getprop "$1" 2>/dev/null | tr -d '\r'; }
 pkgs="$("$A" shell pm list packages 2>/dev/null | tr -d '\r')"
 kernel="$("$A" shell uname -r 2>/dev/null | tr -d '\r')"
-p(){ printf "%-4s %s\n" "$1" "$2"; }
+fail=0
+p(){ printf "%-4s %s\n" "$1" "$2"; if [ "$1" = '!!' ]; then fail=1; fi; }
 
 [ "$(g ro.product.device)" = beyond1lte ] && p OK "device: $(g ro.product.model) ($(g ro.product.device))" \
                                           || p "!!" "device: $(g ro.product.model) — expected beyond1lte"
@@ -21,7 +22,8 @@ p "--" "Android $(g ro.build.version.release) · LineageOS $(g ro.lineage.versio
 echo "$kernel" | grep -qiE 'v0lk3n|nethunter|kali' && p OK "NetHunter kernel: $kernel" \
                                                    || p "!!" "kernel: $kernel — NOT a NetHunter kernel"
 
-echo "$pkgs" | grep -q com.topjohnwu.magisk && p OK "Magisk (root)" || p "!!" "Magisk missing"
+printf '%s\n' "$pkgs" | grep -Fxq package:com.topjohnwu.magisk && p OK "Magisk app" || p "!!" "Magisk missing"
 for x in com.offsec.nethunter com.offsec.nethunter.store com.offsec.nhterm com.offsec.nethunter.kex; do
-  echo "$pkgs" | grep -q "$x" && p OK "$x" || p "!!" "$x MISSING"
+  printf '%s\n' "$pkgs" | grep -Fxq "package:$x" && p OK "$x" || p "!!" "$x MISSING"
 done
+exit "$fail"

@@ -8,6 +8,7 @@ import os
 import stat
 import tempfile
 import unittest
+from unittest import mock
 
 import geotag.core as gt
 
@@ -76,6 +77,14 @@ class TestParseGpx(unittest.TestCase):
         with self.assertRaises(SystemExit):
             self._parse('<!DOCTYPE r [<!ENTITY x "y">]><gpx>&x;</gpx>')
 
+    def test_rejects_utf16_dtd(self):
+        with tempfile.TemporaryDirectory() as d:
+            path = os.path.join(d, "track.gpx")
+            with open(path, "wb") as fh:
+                fh.write('<!DOCTYPE gpx [<!ENTITY x "y">]><gpx>&x;</gpx>'.encode("utf-16"))
+            with self.assertRaises(SystemExit):
+                gt.parse_gpx(path)
+
     def test_skips_nonfinite_and_nonnumeric(self):
         pts = self._parse(
             "<gpx><trk><trkseg>"
@@ -107,6 +116,43 @@ class TestCollect(unittest.TestCase):
 
 
 class TestOutputs(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "POSIX symlink semantics")
+    def test_predictable_temp_symlink_is_not_followed(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "res")
+            other = os.path.join(d, "unrelated.txt")
+            with open(other, "w") as fh:
+                fh.write("keep this file")
+            os.symlink(other, f"{out}.csv.{os.getpid()}.tmp")
+            gt.write_outputs([], out)
+            with open(other) as fh:
+                self.assertEqual(fh.read(), "keep this file")
+
+    @unittest.skipUnless(os.name == "posix", "POSIX file permissions")
+    def test_existing_temp_permissions_do_not_expose_output(self):
+        with tempfile.TemporaryDirectory() as d:
+            out = os.path.join(d, "res")
+            old_temp = f"{out}.csv.{os.getpid()}.tmp"
+            with open(old_temp, "w") as fh:
+                fh.write("stale")
+            os.chmod(old_temp, 0o644)
+            gt.write_outputs([], out)
+            self.assertEqual(stat.S_IMODE(os.stat(out + ".csv").st_mode), 0o600)
+
+    def test_failed_write_leaves_no_location_temp_files(self):
+        with tempfile.TemporaryDirectory() as d:
+            with mock.patch.object(gt.os, "fsync", side_effect=OSError("synthetic disk failure")):
+                with self.assertRaises(OSError):
+                    gt.write_outputs([], os.path.join(d, "res"))
+            self.assertEqual(os.listdir(d), [])
+
+    def test_failed_replace_leaves_no_location_temp_files(self):
+        with tempfile.TemporaryDirectory() as d:
+            with mock.patch.object(gt.os, "replace", side_effect=OSError("synthetic rename failure")):
+                with self.assertRaises(OSError):
+                    gt.write_outputs([], os.path.join(d, "res"))
+            self.assertEqual(os.listdir(d), [])
+
     def test_geojson_and_mode(self):
         rows = [("a.sub", "sub", 100, 59.0, 10.0, True),
                 ("b.sub", "sub", 130, None, None, False)]

@@ -19,6 +19,14 @@ jobs:
       - name: Python tests
         run: python3 -m unittest discover -v
 
+      - name: Flash script safety tests
+        working-directory: .
+        run: python3 -m unittest discover -s tests -v
+
+      - name: Phone script safety tests
+        working-directory: .
+        run: python3 -m unittest discover -s galaxy-s10-nethunter/tests -v
+
       - name: Native date-math test
         run: c++ -std=c++17 -O2 tests/date_math_test.cpp -o /tmp/dt && /tmp/dt
 

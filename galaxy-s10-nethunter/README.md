@@ -2,6 +2,8 @@
 
 Kali NetHunter on a **Samsung Galaxy S10 — SM-G973F (`beyond1lte`, Exynos)**, running **LineageOS 23.2 / Android 16**. A repeatable (re)install and upgrade playbook.
 
+The versions and hardware results below describe the recorded device setup. Newer downloads require a fresh compatibility check on the target phone.
+
 ## What's running
 
 | Layer | Detail |
@@ -52,7 +54,7 @@ The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-net
 
 ## Bundled tools (submodules)
 
-My own tools that run on the phone, pulled in as submodules (`git submodule update --init --recursive`):
+The phone tools are submodules. From this directory, initialize only these tools with `git submodule update --init --recursive -- netsec-auditor cybersec-toolkit`:
 
 | Submodule | What |
 | --- | --- |
@@ -153,6 +155,10 @@ Two AI tools inside the Kali chroot, both **on-demand** — nothing runs in the 
 
 ## Install / upgrade
 
+Back up Android app data, shared storage and the Kali chroot before the recovery format step; restoring `boot.img` cannot recover wiped data. `setup.sh` replaces the deployed `/root/netsec-auditor` and `/root/cybersec-toolkit` source directories, so preserve any phone-side edits first.
+
+`prepare-upgrade.sh` verifies LineageOS files against the API's SHA-256 values. Magisk, vbmeta and the Kali installer still need independent verification before flashing. `ai-setup.sh` also executes an unverified remote installer and leaves model checksums unset; review and verify those inputs before running it as root.
+
 **Easiest:** `./scripts/upgrade.sh` — run it interactively (the `vbmeta` / `setenforce` steps need a local shell). Or manually:
 
 1. **Recovery + AVB off** (Download mode):
@@ -167,6 +173,10 @@ Two AI tools inside the Kali chroot, both **on-demand** — nothing runs in the 
 4. **NetHunter**: `adb push kali-nethunter-*-full.zip /sdcard/` → Magisk → Modules → Install from Storage → reboot
 5. `./scripts/verify.sh`
 6. `./scripts/setup.sh` — provision the userspace tools + bundled tools + on-device `phone-doctor.sh`
+
+`verify.sh` and `phone-doctor.sh` return a nonzero status if a required health check fails. `verify.sh` checks the Magisk app's presence; it does not prove that root access works.
+
+Run local script regressions from the repository root with `python3 -m unittest discover -s galaxy-s10-nethunter/tests -v`. These use mocked device commands and do not validate flashing, Android mounts, SSH connectivity or hardware compatibility.
 
 ## Peripherals — setup
 

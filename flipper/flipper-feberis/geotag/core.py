@@ -9,6 +9,7 @@ import math
 import os
 import re
 import sys
+import tempfile
 import xml.etree.ElementTree as ET
 from datetime import datetime, timezone
 
@@ -35,6 +36,11 @@ def parse_time(s):
     return int(dt.timestamp())
 
 
+class _GpxTreeBuilder(ET.TreeBuilder):
+    def doctype(self, name, pubid, system):
+        raise ValueError("XML DTD/entity declarations are not allowed")
+
+
 def parse_gpx(path):
     """Return [(epoch, lat, lng), ...] sorted by time; skip bad points, reject DTD/entity decls (XXE guard)."""
     try:
@@ -42,11 +48,9 @@ def parse_gpx(path):
             data = fh.read()
     except OSError as e:
         sys.exit(f"cannot read GPX {path}: {e}")
-    if b"<!DOCTYPE" in data or b"<!ENTITY" in data:
-        sys.exit(f"refusing {path}: XML DTD/entity declarations are not allowed")
     try:
-        root = ET.fromstring(data)
-    except ET.ParseError as e:
+        root = ET.fromstring(data, parser=ET.XMLParser(target=_GpxTreeBuilder()))
+    except (ET.ParseError, ValueError) as e:
         sys.exit(f"cannot parse GPX {path}: {e}")
     pts = []
     for tp in root.iter():
@@ -122,12 +126,16 @@ def _iso(t):
 
 def _write_temp(path, text):
     """Write owner-only text to a synced temporary file."""
-    tmp = f"{path}.{os.getpid()}.tmp"                     # pid keeps concurrent runs from colliding
-    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    with os.fdopen(fd, "w", newline="") as fh:
-        fh.write(text)
-        fh.flush()
-        os.fsync(fh.fileno())
+    fd, tmp = tempfile.mkstemp(prefix=os.path.basename(path) + ".", suffix=".tmp",
+                               dir=os.path.dirname(os.path.abspath(path)))
+    try:
+        with os.fdopen(fd, "w", newline="", encoding="utf-8") as fh:
+            fh.write(text)
+            fh.flush()
+            os.fsync(fh.fileno())
+    except BaseException:
+        os.unlink(tmp)
+        raise
     return tmp
 
 
@@ -147,18 +155,19 @@ def write_outputs(rows, out):
     } for name, typ, t, lat, lng, ok in rows if ok]
     gj = json.dumps({"type": "FeatureCollection", "features": feats}, indent=1)
 
-    csv_tmp = _write_temp(csv_path, buf.getvalue())
+    csv_tmp = gj_tmp = None
     try:
+        csv_tmp = _write_temp(csv_path, buf.getvalue())
         gj_tmp = _write_temp(gj_path, gj)
-    except BaseException:
-        os.unlink(csv_tmp)
-        raise
-    os.replace(csv_tmp, csv_path)
-    try:
+        os.replace(csv_tmp, csv_path)
         os.replace(gj_tmp, gj_path)
-    except BaseException:
-        os.unlink(gj_tmp)                                 # csv already committed; don't leak the temp
-        raise
+    finally:
+        for tmp in (csv_tmp, gj_tmp):
+            if tmp is not None:
+                try:
+                    os.unlink(tmp)
+                except FileNotFoundError:
+                    pass
 
 
 def main(argv=None):

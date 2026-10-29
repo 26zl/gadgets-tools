@@ -3,7 +3,7 @@
 # Run interactively (the vbmeta flash needs a local shell): ./upgrade.sh
 # Runs the computer-side commands, pauses for the on-phone taps. See README for details.
 # Needs: adb, heimdall (sudo port install Heimdall; Linux/WSL: sudo apt install heimdall-flash), gh, curl, python3.
-set -uo pipefail
+set -euo pipefail
 HERE="$(cd "$(dirname "$0")" && pwd)"
 DIR="$HOME/nethunter-s10"
 
@@ -25,9 +25,9 @@ ok "Current state"
 step "Download latest files (LineageOS, Magisk v30.7+, vbmeta, Kali installer) to $DIR"
 "$HERE/prepare-upgrade.sh" "$DIR"
 cd "$DIR" || exit 1
-LIN=$(ls -t lineage-*-beyond1lte-signed.zip 2>/dev/null | head -1)
-MAG=$(ls -t Magisk-v*.apk 2>/dev/null | head -1)
-KAL=$(ls -t kali-nethunter-*full.zip 2>/dev/null | head -1)
+LIN=$(ls -t lineage-*-beyond1lte-signed.zip 2>/dev/null | head -1 || true)
+MAG=$(ls -t Magisk-v*.apk 2>/dev/null | head -1 || true)
+KAL=$(ls -t kali-nethunter-*full.zip 2>/dev/null | head -1 || true)
 echo "  LineageOS: ${LIN:-MISSING}"; echo "  Magisk:    ${MAG:-MISSING}"; echo "  Kali:      ${KAL:-MISSING}"
 [ -n "$LIN" ] && [ -n "$MAG" ] && [ -n "$KAL" ] || { echo "Some files missing — check prepare-upgrade output."; exit 1; }
 
@@ -44,7 +44,7 @@ ok "Installing Magisk app + pushing boot.img"
 "$ADB" push boot.img /sdcard/Download/
 
 step "Open Magisk ($MAG) > Install > Select and Patch a File > Download/boot.img > LET'S GO. Wait for 'All done'"
-PATCHED=$("$ADB" shell 'ls /sdcard/Download/magisk_patched*.img 2>/dev/null' | tr -d '\r' | tail -1)
+PATCHED=$("$ADB" shell 'ls /sdcard/Download/magisk_patched*.img 2>/dev/null' | tr -d '\r' | tail -1 || true)
 [ -n "$PATCHED" ] || { echo "No magisk_patched*.img found — did the patch finish?"; exit 1; }
 "$ADB" pull "$PATCHED" ./magisk_patched.img
 

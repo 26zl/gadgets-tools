@@ -23,17 +23,24 @@ echo "$kr" | grep -qiE 'v0lk3n|nethunter|kali' && ok "kernel: $kr" || bad "kerne
 inf "SELinux: $(getenforce 2>/dev/null)"
 
 echo "== Root / NetHunter apps =="
-pkgs=$(pm list packages 2>/dev/null)
-echo "$pkgs" | grep -q com.topjohnwu.magisk && ok "Magisk (root)" || bad "Magisk missing"
+pkgs=$(pm list packages 2>/dev/null | tr -d '\r')
+printf '%s\n' "$pkgs" | grep -Fxq package:com.topjohnwu.magisk && ok "Magisk (root)" || bad "Magisk missing"
 for p in com.offsec.nethunter com.offsec.nethunter.store com.offsec.nhterm com.offsec.nethunter.kex; do
-  echo "$pkgs" | grep -q "$p" && ok "$p" || bad "$p MISSING"
+  printf '%s\n' "$pkgs" | grep -Fxq "package:$p" && ok "$p" || bad "$p MISSING"
 done
 
 echo "== Kali chroot =="
 if [ -d "$K" ]; then
   ok "chroot present: $K"
   for m in proc sys dev dev/pts; do
-    grep -q " $K/$m " /proc/mounts 2>/dev/null || mount -o bind "/$m" "$K/$m" 2>/dev/null
+    if ! grep -q " $K/$m " /proc/mounts 2>/dev/null && ! mount -o bind "/$m" "$K/$m"; then
+      bad "cannot bind /$m into the chroot"; exit 1
+    fi
+  done
+  for m in dev proc sys; do
+    if ! chroot "$K" /usr/bin/mount --make-rslave "/$m"; then
+      bad "cannot isolate /$m mount propagation"; exit 1
+    fi
   done
   pv=$(chroot "$K" /usr/bin/python3 --version 2>&1)
   echo "$pv" | grep -qi python && ok "chroot python: $pv" || bad "chroot python: $pv"
@@ -61,8 +68,12 @@ else
 fi
 
 echo "== netsec-auditor (in chroot) =="
-if [ -x "$K/usr/local/bin/netsec-auditor" ]; then
-  if chroot "$K" /usr/local/bin/netsec-auditor --version >/dev/null 2>&1; then
+auditor=""
+for candidate in /usr/local/bin/netsec-auditor /root/.local/bin/netsec-auditor; do
+  if [ -x "$K$candidate" ]; then auditor="$candidate"; break; fi
+done
+if [ -n "$auditor" ]; then
+  if chroot "$K" "$auditor" --version >/dev/null 2>&1; then
     ok "netsec-auditor installed and runs"
   else
     bad "netsec-auditor present but errors — reinstall (see README)"
@@ -83,3 +94,4 @@ fi
 echo
 if [ "$fail" = 0 ]; then printf '\033[32mAll good\033[0m — %s checks OK.\n' "$pass"
 else printf '\033[31m%s problem(s)\033[0m, %s OK — see the !! lines.\n' "$fail" "$pass"; fi
+[ "$fail" = 0 ]

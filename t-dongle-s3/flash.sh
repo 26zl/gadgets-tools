@@ -4,20 +4,18 @@ set -euo pipefail
 
 REPO="i-am-shodan/USBArmyKnife"
 ASSET="LILYGO-T-Dongle-S3.Firmware.binaries.zip"
-# Firmware is pinned to a tested release and its published SHA256 is verified before flashing, so
-# the script never flashes an unpinned "latest" or an unverified firmware. To bump: pick a release
-# tag, download "$ASSET" from it, and set ASSET_SHA256 to that file's sha256.
+# Keep the release tag and trusted asset checksum together when updating firmware.
 TAG="v1.1.5"
 ASSET_SHA256="de153d2031c831d0154cba7757b2781a54ce2970ba556adec5c4ce6533adcba7"
-# boot_app0 is pinned to a release tag + checksum (was a mutable 'master' ref).
+# The boot image is verified independently of the firmware archive.
 BOOT_APP0_URL="https://raw.githubusercontent.com/espressif/arduino-esp32/3.2.0/tools/partitions/boot_app0.bin"
 BOOT_APP0_SHA256="f94c5d786a7a8fab06ac5d10e33bf37711a6697636dc037559ea19cc410a17f0"
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
 sha256() { command -v sha256sum >/dev/null 2>&1 && sha256sum "$@" || shasum -a 256 "$@"; }
 
-[ -n "$TAG" ] || { echo "!! TAG is unset — edit flash.sh to pin a tested release tag (see TODO)."; exit 1; }
-[ -n "$ASSET_SHA256" ] || { echo "!! ASSET_SHA256 is unset — edit flash.sh to pin the firmware checksum (see TODO)."; exit 1; }
+[ -n "$TAG" ] || { echo "!! TAG is unset — pin a release tag in flash.sh."; exit 1; }
+[ -n "$ASSET_SHA256" ] || { echo "!! ASSET_SHA256 is unset — pin the firmware checksum in flash.sh."; exit 1; }
 
 echo "==> downloading firmware ($ASSET, $TAG)"
 gh release download "$TAG" --repo "$REPO" --pattern "$ASSET" --dir "$W"
@@ -66,3 +64,6 @@ echo "==> flashing on $PORT (esp32s3)"
 
 echo "==> done! Unplug/replug the dongle."
 echo "    Join the WiFi AP the dongle broadcasts, then open http://4.3.2.1:8080"
+echo "    Note: a red \"crash dump\" screen right after flashing is a known false"
+echo "    positive on v1.1.5 (esptool's JTAG reset) — fully unplug/replug to clear it"
+echo "    (USBArmyKnife issue #272)."

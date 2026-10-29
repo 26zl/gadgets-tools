@@ -28,4 +28,5 @@ git submodule update --init flipper/GhostESP                     # pull one boar
 cd flipper/ESP32Marauder && git submodule update --init --jobs 1 # its nested libs, only when building
 ```
 
-MIT licensed — see [LICENSE](../LICENSE).
+First-party files are MIT licensed — see [LICENSE](../LICENSE). Firmware
+submodules retain their upstream licenses and notices.

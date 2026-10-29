@@ -31,7 +31,6 @@ WebServer server(80);
 TinyGPSPlus gps;
 HardwareSerial GPSserial(1);
 
-// Fixed-size access-point record.
 struct Ap { uint8_t bssid[6]; char ssid[33]; int16_t rssi; uint8_t channel, enc;
             double lat, lng; uint32_t seen; bool hasPos; };
 std::vector<Ap> aps;
@@ -50,7 +49,7 @@ uint32_t trackInterval = TRACK_EVERY_MS;   // grows when the track buffer fills
 uint32_t lastScan = 0, lastTrack = 0, scanStart = 0;
 bool scanning = false;
 
-static void haltError(const char* msg);   // defined below; blinks the LED and halts
+static void haltError(const char* msg);
 
 static const char* loadOrMakePass() {
 #ifdef FEBERIS_AP_PASS
@@ -59,7 +58,7 @@ static const char* loadOrMakePass() {
   snprintf(apPass, sizeof apPass, "%s", FEBERIS_AP_PASS);
 #else
   Preferences p;
-  p.begin("feberis", false);
+  if (!p.begin("feberis", false)) haltError("Cannot open AP password storage");
   String s = p.getString("appass", "");
   if (s.length() < 8) {                                   // Generate a 128-bit password.
     static const char hx[] = "0123456789abcdef";
@@ -69,7 +68,7 @@ static const char* loadOrMakePass() {
       for (int i = 0; i < 8; i++) buf[w * 8 + i] = hx[(r[w] >> (i * 4)) & 0xF];
     buf[32] = 0;
     s = buf;
-    p.putString("appass", s);
+    if (p.putString("appass", s) != s.length()) haltError("Cannot persist AP password");
     Serial.println("Generated new random AP password (stored in NVS)");
   }
   p.end();
@@ -114,8 +113,7 @@ static void ingest(int n) {
     Ap* found = nullptr;
     for (auto& a : aps) if (memcmp(a.bssid, b, 6) == 0) { found = &a; break; }
     if (found) {
-      // Record position at the strongest observation — a better single-point WiGLE fix than
-      // stamping it at the first GPS lock, which can be far from where the AP was strongest.
+      // Update position on a stronger observation or the AP's first GPS fix.
       bool stronger = rssi > found->rssi;
       if (stronger) found->rssi = rssi;
       if (haveFix && (stronger || !found->hasPos)) {
@@ -165,12 +163,14 @@ static void handleData() {
   }
   j += "]}";
   server.sendHeader("X-Content-Type-Options", "nosniff");
+  server.sendHeader("Cache-Control", "no-store");
   server.send(200, "application/json", j);
 }
 
 static void handleCsv() {
   server.sendHeader("Content-Disposition", "attachment; filename=\"feberis-wigle.csv\"");
   server.sendHeader("X-Content-Type-Options", "nosniff");
+  server.sendHeader("Cache-Control", "no-store");
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
   server.send(200, "text/csv", "");
   server.sendContent("WigleWifi-1.4,appRelease=feberis,model=ESP32,release=1,device=FeberisPro,display=,board=esp32,brand=Feberis\r\n");
@@ -188,6 +188,7 @@ static void handleCsv() {
 static void handleGpx() {
   server.sendHeader("Content-Disposition", "attachment; filename=\"feberis-track.gpx\"");
   server.sendHeader("X-Content-Type-Options", "nosniff");
+  server.sendHeader("Cache-Control", "no-store");
   server.setContentLength(CONTENT_LENGTH_UNKNOWN);
   server.send(200, "application/gpx+xml", "");
   server.sendContent("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"

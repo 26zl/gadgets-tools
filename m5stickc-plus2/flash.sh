@@ -4,17 +4,15 @@ set -euo pipefail
 
 REPO="BruceDevices/firmware"
 ASSET="Bruce-m5stack-cplus2.bin"
-# Firmware is pinned to a tested release and its published SHA256 is verified before flashing, so
-# the script never flashes an unpinned "latest" or an unverified image. To bump: pick a release
-# tag, download "$ASSET" from it, and set ASSET_SHA256 to that file's sha256.
+# Keep the release tag and trusted asset checksum together when updating firmware.
 TAG="1.16.1"
 ASSET_SHA256="1b99c588d57b5c33baf61a5ca2d24122cc3835a74a65553142ac3513f729efe0"
 W="$(mktemp -d)"
 trap 'rm -rf "$W"' EXIT
 sha256() { command -v sha256sum >/dev/null 2>&1 && sha256sum "$@" || shasum -a 256 "$@"; }
 
-[ -n "$TAG" ] || { echo "!! TAG is unset — edit flash.sh to pin a tested release tag (see TODO)."; exit 1; }
-[ -n "$ASSET_SHA256" ] || { echo "!! ASSET_SHA256 is unset — edit flash.sh to pin the release checksum (see TODO)."; exit 1; }
+[ -n "$TAG" ] || { echo "!! TAG is unset — pin a release tag in flash.sh."; exit 1; }
+[ -n "$ASSET_SHA256" ] || { echo "!! ASSET_SHA256 is unset — pin the release checksum in flash.sh."; exit 1; }
 
 echo "==> downloading Bruce ($ASSET, $TAG)"
 gh release download "$TAG" --repo "$REPO" --pattern "$ASSET" --dir "$W"

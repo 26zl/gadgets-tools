@@ -17,4 +17,5 @@ Tools and firmware for various Flipper Zero, ESP32, and phone pentest gadgets �
 
 Each folder is self-contained — see its own README. After cloning, `git submodule update --init` pulls the tool submodules. **Don't add `--recursive`** — the `flipper/` firmware submodules (Momentum, GhostESP, ESP32Marauder) are large (~1.5 GB) with deep nested libs that only matter for WiFi-Dev-Board builds; init those individually when you build them.
 
-MIT licensed — see [LICENSE](LICENSE).
+First-party files are MIT licensed — see [LICENSE](LICENSE). Submodules retain
+their own licenses and notices; the MIT license does not relicense their contents.

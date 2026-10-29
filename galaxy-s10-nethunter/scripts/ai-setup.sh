@@ -1,26 +1,8 @@
 #!/usr/bin/env bash
-# On-device AI for the Galaxy S10 NetHunter chroot: Claude Code (cloud CLI) + a
-# local LLM (llama.cpp) — both pure on-demand (nothing runs in the background;
-# RAM is freed the moment they exit).
-#
-# Run INSIDE the Kali chroot as root (phone-side), over ssh-setup.sh's channel:
+# Install Claude Code and on-demand llama.cpp models inside the S10 Kali chroot as root.
+# Usage over ssh-setup.sh's channel:
 #   ssh s10 'bash -s' < scripts/ai-setup.sh
-# ...or paste it in the NetHunter (Kali) terminal. Needs internet in the chroot.
-# Idempotent — safe to re-run (skips an existing build / already-downloaded models).
-#
-# Installs:
-#   claude          Claude Code CLI — Anthropic API client (full model, needs internet
-#                   + login; run `claude` once to authenticate). The tool for real work.
-#   llm  "..."      local Llama-3.2-3B-Instruct Q4_K_M  (~3.7 tok/s, better quality)
-#   llmf "..."      local Llama-3.2-1B-Instruct Q4_K_M  (~8 tok/s, fast; weak — quick/offline)
-#                   no args => interactive chat (/exit to quit)
-#
-# Two Exynos-9820-specific lessons are baked in (see README "On-device AI"):
-#   1. dotprod must be FORCED at build time — GCC's -march=native does NOT enable it
-#      on Samsung's custom M4 core (falls back to generic armv8-a, ~2 tok/s), so we
-#      compile explicitly for armv8.2-a+dotprod+fp16.
-#   2. The 2 M4 (Mongoose) cores (cpu 6-7) throttle erratically and stall llama.cpp's
-#      per-token thread barrier — pinning to cores 0-5 (A55+A75) ~doubles throughput.
+# Exynos 9820 needs explicit dotprod flags and cores 0-5 to avoid M4 throttling stalls.
 set -uo pipefail
 
 command -v apt-get >/dev/null 2>&1 || { echo "Run this INSIDE the Kali chroot (no apt-get here)."; exit 1; }
@@ -30,8 +12,7 @@ sha256(){ command -v sha256sum >/dev/null 2>&1 && sha256sum "$@" || shasum -a 25
 
 LLAMA_SRC=/opt/llama.cpp
 MODELS=/opt/models
-# Pinned to a specific llama.cpp commit (full 40-char SHA) so the build step cannot clone a mutable
-# HEAD and let upstream change the build inputs. Bump to a newer master commit as needed.
+# Pin the initial llama.cpp checkout to a reviewed commit.
 LLAMA_COMMIT="a9d27ac693ff0a1d3cba449c912c2b891904a4c7"
 M3="$MODELS/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 M1="$MODELS/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
@@ -46,8 +27,6 @@ step "1/6  Claude Code CLI"
 if command -v claude >/dev/null 2>&1; then
   echo "    already installed: $(claude --version 2>/dev/null | head -1)"
 else
-  # Download the installer to a file and run that file, instead of piping curl into a root shell,
-  # so the fetched script can be inspected or verified before it executes.
   # TODO(maintainer): verify the installer against a trusted SHA256 before running it.
   installer="$(mktemp)"
   if curl -fsSL -o "$installer" https://claude.ai/install.sh; then
@@ -65,7 +44,7 @@ step "2/6  Build dependencies"
 export DEBIAN_FRONTEND=noninteractive
 apt-get install -y --no-install-recommends build-essential cmake git curl libcurl4-openssl-dev 2>&1 | tail -3
 
-step "3/6  Build llama.cpp with dotprod forced (see header note #1)"
+step "3/6  Build llama.cpp with dotprod forced"
 if [ ! -d "$LLAMA_SRC/.git" ]; then
   [ -n "$LLAMA_COMMIT" ] || { echo "LLAMA_COMMIT is unset — edit ai-setup.sh to pin a reviewed commit (see TODO)."; exit 1; }
   # Blobless partial clone keeps it lean while still allowing checkout of the pinned commit.
@@ -102,7 +81,7 @@ for pair in "$M3|$M3_URL|$M3_SHA256" "$M1|$M1_URL|$M1_SHA256"; do
   fi
 done
 
-step "5/6  Install llm / llmf wrappers (pinned to cores 0-5 — see header note #2)"
+step "5/6  Install llm / llmf wrappers (pinned to cores 0-5)"
 mkwrap(){ # $1 command name  $2 model path
   cat > "/usr/local/bin/$1" <<WRAP
 #!/bin/bash

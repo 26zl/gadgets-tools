@@ -10,8 +10,9 @@ ADB=""; for c in adb "$HOME/Library/Android/sdk/platform-tools/adb" /opt/homebre
 [ "$("$ADB" get-state 2>/dev/null)" = device ] || { echo "No device — connect adb and approve."; exit 1; }
 command -v gh >/dev/null || { echo "gh (GitHub CLI) required"; exit 1; }
 TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
-pkgs="$("$ADB" shell pm list packages 2>/dev/null)"
-has(){ echo "$pkgs" | grep -q "package:$1"; }
+pkgs="$("$ADB" shell pm list packages 2>/dev/null | tr -d '\r')"
+failed=0
+has(){ printf '%s\n' "$pkgs" | grep -Fxq "package:$1"; }
 
 pick_best(){ # choose the arm64/universal, non-debug apk in $TMP
   local f
@@ -22,12 +23,17 @@ pick_best(){ # choose the arm64/universal, non-debug apk in $TMP
 }
 install_apk(){ local label="$1" apk="$2"
   { [ -n "$apk" ] && [ -f "$apk" ] && "$ADB" install -r "$apk" >/dev/null 2>&1 && echo "  $label: installed"; } \
-    || echo "  $label: FAILED (grab from F-Droid)"
+    || { echo "  $label: FAILED (grab from F-Droid)"; failed=1; }
 }
 
 # F-Droid (direct)
 if has org.fdroid.fdroid; then echo "  F-Droid: already installed"; else
-  rm -f "$TMP"/*.apk; curl -fsSL -o "$TMP/fdroid.apk" https://f-droid.org/F-Droid.apk && install_apk "F-Droid" "$TMP/fdroid.apk"
+  rm -f "$TMP"/*.apk
+  if curl -fsSL -o "$TMP/fdroid.apk" https://f-droid.org/F-Droid.apk; then
+    install_apk "F-Droid" "$TMP/fdroid.apk"
+  else
+    echo "  F-Droid: FAILED (download)"; failed=1
+  fi
 fi
 # Aurora Store (F-Droid repo — reliable)
 if has com.aurora.store; then echo "  Aurora Store: already installed"; else
@@ -51,7 +57,7 @@ for e in "com.termux|Termux|termux/termux-app|*universal*.apk" \
     || gh release download --repo "$repo" --pattern '*.apk' --dir "$TMP" --clobber 2>/dev/null
   apk="$(pick_best)"
   if [ -n "$apk" ] && "$ADB" install -r "$apk" >/dev/null 2>&1; then echo "  $label: installed (GitHub)"
-  else echo "  $label: FAILED — install from GitHub only (never mix sources; shared com.termux signature)"; fi
+  else echo "  $label: FAILED — install from GitHub only (never mix sources; shared com.termux signature)"; failed=1; fi
 done
 
 # GitHub apps:  pkgid | label | owner/repo | preferred-glob
@@ -77,10 +83,11 @@ for e in "${GH_APPS[@]}"; do
   if [ -n "$apk" ] && "$ADB" install -r "$apk" >/dev/null 2>&1; then echo "  $label: installed"; else
     rm -f "$TMP"/*.apk   # fallback: F-Droid repo
     vc=$(curl -fsSL "https://f-droid.org/api/v1/packages/$pkg" 2>/dev/null | python3 -c "import sys,json;print(json.load(sys.stdin)['packages'][0]['versionCode'])" 2>/dev/null)
-    { [ -n "$vc" ] && curl -fSL -o "$TMP/fd.apk" "https://f-droid.org/repo/${pkg}_${vc}.apk" 2>/dev/null && "$ADB" install -r "$TMP/fd.apk" >/dev/null 2>&1 && echo "  $label: installed (F-Droid)"; } || echo "  $label: FAILED (grab from F-Droid)"
+    { [ -n "$vc" ] && curl -fSL -o "$TMP/fd.apk" "https://f-droid.org/repo/${pkg}_${vc}.apk" 2>/dev/null && "$ADB" install -r "$TMP/fd.apk" >/dev/null 2>&1 && echo "  $label: installed (F-Droid)"; } || { echo "  $label: FAILED (grab from F-Droid)"; failed=1; }
   fi
 done
 
 echo
 echo "Magisk modules (via Magisk app): LSPosed, PlayIntegrityFix, Shamiko."
 echo "Hardened Firefox alternative: IronFox (F-Droid / gitlab.com/ironfox-oss)."
+exit "$failed"
