@@ -61,8 +61,8 @@ shellcheck -S warning galaxy-s10-nethunter/scripts/*.sh m5stickc-plus2/flash.sh 
 - Shell: 2-space indent, `set -euo pipefail`, must pass `shellcheck -S warning`.
 - Python: 4-space indent, keep it clean under `ruff`.
 - C/C++: 2-space indent.
-- Commit messages: short, imperative, lower-case subject (see `git log`); no AI
-  attribution trailers — match the existing history.
+- Commit messages: short, imperative subject (see `git log`); no AI attribution
+  trailers — match the existing history.
 - Never commit a submodule pin that points at an unpushed commit, and don't bump a
   submodule past what you have verified.
 - No secrets, credentials, or captured data in commits.
