@@ -15,6 +15,8 @@ HD="";  for c in heimdall /opt/local/bin/heimdall /usr/bin/heimdall; do command 
 ok(){   printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
 step(){ printf '\n\033[1;36m[STEP] %s\033[0m\n' "$*"; read -rp '       Press Enter when done... ' _; }
 wait_auth(){ printf '       waiting for phone (approve the USB-debugging prompt if shown)...\n'; until [ "$("$ADB" get-state 2>/dev/null)" = device ]; do sleep 2; done; }
+sha256(){ command -v sha256sum >/dev/null 2>&1 && sha256sum "$@" || shasum -a 256 "$@"; }
+sha256c(){ if command -v sha256sum >/dev/null 2>&1; then sha256sum -c "$@"; else shasum -a 256 -c "$@"; fi; }
 
 ok "Galaxy S10 NetHunter — guided upgrade"
 echo "adb=$ADB   heimdall=$($HD version 2>&1 | tail -1)"
@@ -22,12 +24,19 @@ echo "adb=$ADB   heimdall=$($HD version 2>&1 | tail -1)"
 ok "Current state"
 "$HERE/verify.sh" || echo "(phone not connected / not booted — fine for a fresh install)"
 
-step "Download latest files (LineageOS, Magisk v30.7+, vbmeta, Kali installer) to $DIR"
+step "Download the pinned files (LineageOS, Magisk, vbmeta, Kali installer) to $DIR"
 "$HERE/prepare-upgrade.sh" "$DIR"
 cd "$DIR" || exit 1
-LIN=$(ls -t lineage-*-beyond1lte-signed.zip 2>/dev/null | head -1 || true)
-MAG=$(ls -t Magisk-v*.apk 2>/dev/null | head -1 || true)
-KAL=$(ls -t kali-nethunter-*full.zip 2>/dev/null | head -1 || true)
+# Use only the files prepare-upgrade.sh verified, and re-check them right before flashing.
+[ -s verified.sha256 ] || { echo "verified.sha256 missing — run prepare-upgrade.sh."; exit 1; }
+sha256c verified.sha256 >/dev/null || { echo "A file no longer matches verified.sha256 — re-run prepare-upgrade.sh."; exit 1; }
+pick(){ awk -v re="$1" '$2 ~ re {f = $2} END {print f}' verified.sha256; }
+LIN=$(pick '^lineage-.*-beyond1lte-signed[.]zip$')
+MAG=$(pick '^Magisk-v.*[.]apk$')
+KAL=$(pick '^kali-nethunter-.*full[.]zip$')
+for f in recovery.img vbmeta.img boot.img; do
+  [ "$(pick "^$f\$")" = "$f" ] || { echo "$f is not in verified.sha256 — re-run prepare-upgrade.sh."; exit 1; }
+done
 echo "  LineageOS: ${LIN:-MISSING}"; echo "  Magisk:    ${MAG:-MISSING}"; echo "  Kali:      ${KAL:-MISSING}"
 [ -n "$LIN" ] && [ -n "$MAG" ] && [ -n "$KAL" ] || { echo "Some files missing — check prepare-upgrade output."; exit 1; }
 
@@ -41,11 +50,17 @@ step "Reboot System. Finish setup, connect WiFi, enable USB debugging (approve t
 wait_auth
 ok "Installing Magisk app + pushing boot.img"
 "$ADB" install -r "$MAG"
+# Only a patched image created by this run may be flashed — never a stale one.
+patched(){ "$ADB" shell 'ls /sdcard/Download/magisk_patched*.img 2>/dev/null' | tr -d '\r' | sort; }
+BEFORE=$(patched || true)
 "$ADB" push boot.img /sdcard/Download/
+ondev=$("$ADB" shell sha256sum /sdcard/Download/boot.img | tr -d '\r' | awk '{print $1}')
+[ "$ondev" = "$(sha256 boot.img | awk '{print $1}')" ] || { echo "boot.img on the phone does not match the verified download — aborting."; exit 1; }
 
 step "Open Magisk ($MAG) > Install > Select and Patch a File > Download/boot.img > LET'S GO. Wait for 'All done'"
-PATCHED=$("$ADB" shell 'ls /sdcard/Download/magisk_patched*.img 2>/dev/null' | tr -d '\r' | tail -1 || true)
-[ -n "$PATCHED" ] || { echo "No magisk_patched*.img found — did the patch finish?"; exit 1; }
+PATCHED=$(comm -13 <(printf '%s\n' "$BEFORE") <(patched || true) | grep . || true)
+count=$(printf '%s\n' "$PATCHED" | grep -c . || true)
+[ "$count" = 1 ] || { echo "Expected exactly one new magisk_patched*.img from this run, found $count — patch again and re-run."; exit 1; }
 "$ADB" pull "$PATCHED" ./magisk_patched.img
 
 step "Put the phone in DOWNLOAD mode again"

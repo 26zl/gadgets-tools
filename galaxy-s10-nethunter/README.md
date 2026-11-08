@@ -41,7 +41,7 @@ The [official Kali S10 guide](https://www.kali.org/docs/nethunter/installing-net
 | Script | Does |
 | --- | --- |
 | `upgrade.sh` | Guided (re)install — downloads + walks you through every step, then verifies |
-| `prepare-upgrade.sh` | Just download the latest files → `~/nethunter-s10` |
+| `prepare-upgrade.sh` | Just download + verify the pinned files → `~/nethunter-s10` (writes `verified.sha256`) |
 | `setup.sh` | **Post-install provisioning** — installs the chroot tools/deps not in the base image (nmap, gpsd, aircrack/wifite, pipx …), ships the bundled tools + `phone-doctor.sh`, then verifies |
 | `verify.sh` | adb health-check from the **Mac** (device, kernel, Magisk, NetHunter apps) |
 | `phone-doctor.sh` | health check run **on the phone** as root (AndroidSu / Termux): chroot, ALFA, GPS, netsec-auditor |
@@ -157,7 +157,7 @@ Two AI tools inside the Kali chroot, both **on-demand** — nothing runs in the 
 
 Back up Android app data, shared storage and the Kali chroot before the recovery format step; restoring `boot.img` cannot recover wiped data. `setup.sh` replaces the deployed `/root/netsec-auditor` and `/root/cybersec-toolkit` source directories, so preserve any phone-side edits first.
 
-`prepare-upgrade.sh` verifies LineageOS files against the API's SHA-256 values. Magisk, vbmeta and the Kali installer still need independent verification before flashing. `ai-setup.sh` also executes an unverified remote installer and leaves model checksums unset; review and verify those inputs before running it as root.
+`prepare-upgrade.sh` checks every download against a trusted SHA-256 — LineageOS against its API, Magisk (pinned **v30.7**) and `vbmeta` against pinned GitHub release digests, the Kali installer against Kali's `SHA256SUMS` — and lists them in `verified.sha256`. `upgrade.sh` flashes only those files, re-checks them first, confirms the `boot.img` on the phone matches, and flashes only a `magisk_patched*.img` created by that run. To move to a newer Magisk or `vbmeta`, update the tag and its digest together. `ai-setup.sh` pins the models to a Hugging Face revision + SHA-256 (re-checking files already present) and runs only a reviewed copy of the Claude installer; when upstream changes it, review it and update `CLAUDE_INSTALLER_SHA256`.
 
 **Easiest:** `./scripts/upgrade.sh` — run it interactively (the `vbmeta` / `setenforce` steps need a local shell). Or manually:
 
