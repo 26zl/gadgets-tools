@@ -1,4 +1,5 @@
 import base64
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -38,9 +39,22 @@ if name == "adb":
         sys.exit(int(os.environ.get("REMOTE_STATUS", "0")))
     elif args and args[0] == "push":
         sys.exit(int(os.environ.get("PUSH_STATUS", "0"))) if os.environ.get("PUSH_STATUS") else None
-        shutil.copyfile(args[1], Path(os.environ["CAPTURE_DIR"]) / Path(args[2]).name)
+        target = args[1] if args[2].endswith("/") else args[2]
+        shutil.copyfile(args[1], Path(os.environ["CAPTURE_DIR"]) / Path(target).name)
     elif args and args[0] == "install":
         sys.exit(int(os.environ.get("INSTALL_STATUS", "0")))
+    elif args and args[0] == "shell" and "magisk_patched" in args[1]:
+        listings = json.loads(os.environ.get("PATCHED_LISTINGS", "[[]]"))
+        counter = Path(os.environ["CAPTURE_DIR"]) / ".patched-calls"
+        n = int(counter.read_text()) if counter.exists() else 0
+        counter.write_text(str(n + 1))
+        print("\n".join(listings[min(n, len(listings) - 1)]))
+    elif args[:2] == ["shell", "sha256sum"]:
+        import hashlib
+        data = (Path(os.environ["CAPTURE_DIR"]) / Path(args[2]).name).read_bytes()
+        print(f"{hashlib.sha256(data).hexdigest()}  {args[2]}")
+    elif args and args[0] == "pull":
+        Path(args[2]).write_bytes(b"synthetic patched image")
 elif name in ("curl", "gh"):
     status = int(os.environ.get("DOWNLOAD_STATUS", "0"))
     if status:
@@ -57,7 +71,7 @@ elif name == "git":
     sys.exit(int(os.environ.get("GIT_STATUS", "0")))
 elif name == "heimdall":
     print("test heimdall")
-    sys.exit(12 if "flash" in args else 0)
+    sys.exit(int(os.environ.get("HEIMDALL_STATUS", "12")) if "flash" in args else 0)
 elif name == "prepare-upgrade.sh":
     sys.exit(int(os.environ.get("DOWNLOAD_STATUS", "0")))
 elif name == "verify.sh":
@@ -200,9 +214,13 @@ class PhoneScriptTests(unittest.TestCase):
         self.stub("prepare-upgrade.sh", scripts)
         files = self.root / "nethunter-s10"
         files.mkdir()
+        manifest = []
         for filename in ("lineage-test-beyond1lte-signed.zip", "Magisk-v-test.apk",
-                         "kali-nethunter-testfull.zip", "recovery.img", "vbmeta.img"):
-            (files / filename).touch()
+                         "kali-nethunter-testfull.zip", "recovery.img", "vbmeta.img", "boot.img"):
+            data = f"synthetic {filename}".encode()
+            (files / filename).write_bytes(data)
+            manifest.append(f"{hashlib.sha256(data).hexdigest()}  {filename}\n")
+        (files / "verified.sha256").write_text("".join(manifest))
         return scripts
 
     def test_upgrade_stops_after_failed_download(self):
@@ -215,6 +233,39 @@ class PhoneScriptTests(unittest.TestCase):
         scripts = self.stage_upgrade()
         self.assertEqual(self.run_script("upgrade.sh", directory=scripts).returncode, 12)
         self.assertFalse(any(call[:3] == ["adb", "-d", "sideload"] for call in self.calls()))
+
+    def test_upgrade_refuses_files_that_no_longer_match_the_manifest(self):
+        scripts = self.stage_upgrade()
+        (self.root / "nethunter-s10" / "vbmeta.img").write_bytes(b"tampered")
+        self.assertNotEqual(self.run_script("upgrade.sh", directory=scripts).returncode, 0)
+        self.assertFalse(any(call[0] == "heimdall" and "flash" in call for call in self.calls()))
+
+    def test_upgrade_flashes_only_the_freshly_patched_image(self):
+        scripts = self.stage_upgrade()
+        self.env["HEIMDALL_STATUS"] = "0"
+        self.env["PATCHED_LISTINGS"] = json.dumps([
+            ["/sdcard/Download/magisk_patched-old.img"],
+            ["/sdcard/Download/magisk_patched-new.img", "/sdcard/Download/magisk_patched-old.img"],
+        ])
+        result = self.run_script("upgrade.sh", directory=scripts)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertIn(["adb", "pull", "/sdcard/Download/magisk_patched-new.img",
+                       "./magisk_patched.img"], self.calls())
+        self.assertIn(["heimdall", "flash", "--BOOT", "magisk_patched.img"], self.calls())
+
+    def test_upgrade_refuses_a_missing_or_ambiguous_patched_image(self):
+        scripts = self.stage_upgrade()
+        self.env["HEIMDALL_STATUS"] = "0"
+        for after in ([], ["/sdcard/Download/magisk_patched-a.img",
+                           "/sdcard/Download/magisk_patched-b.img"]):
+            with self.subTest(new_images=len(after)):
+                self.log.unlink(missing_ok=True)
+                (self.capture / ".patched-calls").unlink(missing_ok=True)
+                self.env["PATCHED_LISTINGS"] = json.dumps([[], after])
+                self.assertNotEqual(self.run_script("upgrade.sh", directory=scripts).returncode, 0)
+                self.assertFalse(any(call[:2] == ["adb", "pull"] for call in self.calls()))
+                self.assertFalse(any(call[:3] == ["heimdall", "flash", "--BOOT"]
+                                     for call in self.calls()))
 
     def test_setup_limits_submodules_and_stops_on_failure(self):
         self.env["GIT_STATUS"] = "15"

@@ -16,23 +16,25 @@ MODELS=/opt/models
 LLAMA_COMMIT="a9d27ac693ff0a1d3cba449c912c2b891904a4c7"
 M3="$MODELS/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
 M1="$MODELS/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
-M3_URL="https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/main/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
-M1_URL="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/main/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
-# TODO(maintainer): set these to the SHA256 published on each model's Hugging Face page so the
-# download is verified; left empty the script warns and keeps the file (these are large).
-M3_SHA256=""
-M1_SHA256=""
+# Models are pinned to a Hugging Face revision; each SHA256 is the file's LFS object id there.
+M3_URL="https://huggingface.co/bartowski/Llama-3.2-3B-Instruct-GGUF/resolve/5ab33fa94d1d04e903623ae72c95d1696f09f9e8/Llama-3.2-3B-Instruct-Q4_K_M.gguf"
+M1_URL="https://huggingface.co/bartowski/Llama-3.2-1B-Instruct-GGUF/resolve/067b946cf014b7c697f3654f621d577a3e3afd1c/Llama-3.2-1B-Instruct-Q4_K_M.gguf"
+M3_SHA256="6c1a2b41161032677be168d354123594c0e6e67d2b9227c84f296ad037c728ff"
+M1_SHA256="6f85a640a97cf2bf5b8e764087b1e83da0fdb51d7c9fab7d0fece9385611df83"
+# Reviewed copy of https://claude.ai/install.sh; when it changes, review it and update this.
+CLAUDE_INSTALLER_SHA256="3a68d3406cf674e17bed1733a4dcf37805e2e47d87417700007d7e1aa766a944"
 
 step "1/6  Claude Code CLI"
 if command -v claude >/dev/null 2>&1; then
   echo "    already installed: $(claude --version 2>/dev/null | head -1)"
 else
-  # TODO(maintainer): verify the installer against a trusted SHA256 before running it.
   installer="$(mktemp)"
-  if curl -fsSL -o "$installer" https://claude.ai/install.sh; then
+  if ! curl -fsSL -o "$installer" https://claude.ai/install.sh; then
+    echo "    (could not download the installer — check network)"
+  elif [ "$(sha256 "$installer" | awk '{print $1}')" = "$CLAUDE_INSTALLER_SHA256" ]; then
     bash "$installer" || echo "    (claude install returned nonzero — check network)"
   else
-    echo "    (could not download the installer — check network)"
+    echo "    !! install.sh changed upstream — not running it. Review it, then update CLAUDE_INSTALLER_SHA256."
   fi
   rm -f "$installer"
 fi
@@ -64,17 +66,16 @@ step "4/6  Download models (~2.7 GB: 3B + 1B)"
 mkdir -p "$MODELS"
 for pair in "$M3|$M3_URL|$M3_SHA256" "$M1|$M1_URL|$M1_SHA256"; do
   f="${pair%%|*}"; rest="${pair#*|}"; url="${rest%%|*}"; want="${rest##*|}"
-  if [ -s "$f" ]; then
-    echo "    have $(basename "$f")"
+  if [ -s "$f" ] && [ "$(sha256 "$f" | awk '{print $1}')" = "$want" ]; then
+    echo "    have $(basename "$f"), sha256 ok"
     continue
   fi
+  [ -s "$f" ] && echo "    $(basename "$f") does not match its pinned sha256 — downloading again"
   echo "    fetching $(basename "$f") ..."
   if ! curl -L --fail --retry 3 -o "$f" "$url"; then
     echo "    !! download failed: $url"; rm -f "$f"; continue
   fi
-  if [ -z "$want" ]; then
-    echo "    -> $(du -h "$f" | cut -f1)  !! not checksum-verified (set its SHA256 — see TODO)"
-  elif [ "$(sha256 "$f" | awk '{print $1}')" = "$want" ]; then
+  if [ "$(sha256 "$f" | awk '{print $1}')" = "$want" ]; then
     echo "    -> $(du -h "$f" | cut -f1), sha256 ok"
   else
     echo "    !! sha256 mismatch for $(basename "$f") — removing"; rm -f "$f"
