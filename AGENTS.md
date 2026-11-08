@@ -55,7 +55,7 @@ shellcheck -S warning galaxy-s10-nethunter/scripts/*.sh m5stickc-plus2/flash.sh 
 - Shell: 2-space indent, `set -euo pipefail`, must pass `shellcheck -S warning`.
 - Python: 4-space indent, clean under `ruff`.
 - C/C++: 2-space indent.
-- Commits: short, imperative, lower-case subject; no AI attribution trailers.
+- Commits: short, imperative subject (match `git log`); no AI attribution trailers.
 
 ## Submodules
 
