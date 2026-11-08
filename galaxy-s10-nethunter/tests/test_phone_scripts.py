@@ -285,6 +285,30 @@ class PhoneScriptTests(unittest.TestCase):
         self.assertIn("for m in dev proc sys; do chroot $K /usr/bin/mount --make-rslave /$m; done", outer[2])
         self.assertFalse(any(call[:2] == ["adb", "push"] for call in self.calls()))
 
+    def test_setup_keeps_previous_tool_copies_and_leaves_one_netsec_install(self):
+        self.env["PACKAGES"] = "\n".join(f"package:{pkg}" for pkg in (
+            "com.topjohnwu.magisk", "com.offsec.nethunter", "com.offsec.nethunter.store",
+            "com.offsec.nhterm", "com.offsec.nethunter.kex"))
+        result = self.run_script("setup.sh")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        commands = [shlex.split(call[2])[2] for call in self.calls()
+                    if call[:2] == ["adb", "shell"] and call[2].startswith("su -c")]
+        ships = [command for command in commands if "tar xf" in command]
+        self.assertEqual(len(ships), 2)
+        for command in ships:
+            # Unpacked beside the live copy and swapped in; the live copy is never deleted outright.
+            self.assertIn("mv $D $D.prev", command)
+            self.assertIn("mv $D.new $D", command)
+            self.assertNotIn("rm -rf $D;", command)
+        install = self.capture / "netsec-install.sh"
+        source = install.read_text()
+        self.assertIn('pipx install --force ".[all]"', source)
+        self.assertIn("pip uninstall -y --break-system-packages netsec-auditor", source)
+        self.assertIn("ln -sf /root/.local/bin/netsec-auditor /usr/local/bin/netsec-auditor", source)
+        self.assertIn('pip install --break-system-packages --upgrade ".[wireless]"', source)
+        syntax = subprocess.run(["bash", "-n", str(install)], capture_output=True)
+        self.assertEqual(syntax.returncode, 0, syntax.stderr)
+
     def test_app_installers_report_download_failure_and_continue(self):
         self.env["DOWNLOAD_STATUS"] = "12"
         for script in ("apps.sh", "extras.sh"):
