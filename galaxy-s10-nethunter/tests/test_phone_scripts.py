@@ -285,11 +285,24 @@ class PhoneScriptTests(unittest.TestCase):
         self.assertIn("for m in dev proc sys; do chroot $K /usr/bin/mount --make-rslave /$m; done", outer[2])
         self.assertFalse(any(call[:2] == ["adb", "push"] for call in self.calls()))
 
+    def stage_setup(self):
+        s10 = self.root / "s10"
+        scripts = s10 / "scripts"
+        scripts.mkdir(parents=True)
+        for name in ("setup.sh", "verify.sh", "phone-doctor.sh"):
+            shutil.copy(SCRIPTS / name, scripts / name)
+        # Stand-ins for checked-out submodules, so the test does not depend on the real checkout.
+        for submodule in ("netsec-auditor", "cybersec-toolkit"):
+            (s10 / submodule).mkdir()
+            (s10 / submodule / ".git").write_text("gitdir: synthetic\n")
+        return scripts
+
     def test_setup_keeps_previous_tool_copies_and_leaves_one_netsec_install(self):
+        scripts = self.stage_setup()
         self.env["PACKAGES"] = "\n".join(f"package:{pkg}" for pkg in (
             "com.topjohnwu.magisk", "com.offsec.nethunter", "com.offsec.nethunter.store",
             "com.offsec.nhterm", "com.offsec.nethunter.kex"))
-        result = self.run_script("setup.sh")
+        result = self.run_script("setup.sh", directory=scripts)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         commands = [shlex.split(call[2])[2] for call in self.calls()
                     if call[:2] == ["adb", "shell"] and call[2].startswith("su -c")]
