@@ -117,7 +117,7 @@ Can't be adb-installed — install in **Magisk → Modules → Install from stor
 
 ### Kali chroot (`./scripts/setup.sh` + `kalifs_full`)
 
-Base image ships `nmap` · aircrack-ng suite · `wifite` · `reaver` · `kismet` · `bettercap` · `gpsd`. `setup.sh` adds `masscan` · `pipx` · `gpsd-clients` and installs **netsec-auditor**. Health-check the whole rig with `scripts/phone-doctor.sh`.
+Base image ships `nmap` · aircrack-ng suite · `wifite` · `reaver` · `kismet` · `bettercap` · `gpsd`. `setup.sh` adds `masscan` · `pipx` · `gpsd-clients` and installs **netsec-auditor** (re-runs upgrade it and leave a single copy on `PATH`). Each re-run keeps the previous copy of a shipped tool tree as `/root/<tool>.prev` in the chroot. Health-check the whole rig with `scripts/phone-doctor.sh`.
 
 > **Upgrading the chroot:** systemd v260+ can't configure on this device's 4.14 kernel ([systemd #41250](https://github.com/systemd/systemd/issues/41250) — `openat2` unsupported → `Protocol driver not attached`), so the systemd stack is **held** (`apt-mark hold systemd systemd-sysv udev libsystemd0 libpam-systemd`) to keep `dpkg` consistent. Run big upgrades with `TMPDIR=/tmp` and a `policy-rc.d` returning `101` (standard chroot practice — blocks service starts) to avoid `mktemp` / service-start failures.
 
